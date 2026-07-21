@@ -5,9 +5,17 @@ import joblib
 import numpy as np
 import pandas as pd
 import streamlit as st
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-import shap
+
+try:
+    import shap
+    HAS_SHAP = True
+except Exception:
+    HAS_SHAP = False
+
 
 # Configure Matplotlib fonts for crisp rendering
 plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS', 'DejaVu Sans', 'sans-serif']
@@ -571,20 +579,25 @@ with right_panel:
         else:
             classifier = model
 
-        explainer = shap.TreeExplainer(classifier)
-        shap_res = explainer(scaled_df)
-        
-        if len(shap_res.shape) == 3:
-            s_vals = shap_res[0, :, 1].values
-        else:
-            s_vals = shap_res[0].values
+        if HAS_SHAP:
+            explainer = shap.TreeExplainer(classifier)
+            shap_res = explainer(scaled_df)
             
-        shap_vals_list = list(s_vals)
-        shap_calculated = True
+            if len(shap_res.shape) == 3:
+                s_vals = shap_res[0, :, 1].values
+            else:
+                s_vals = shap_res[0].values
+                
+            shap_vals_list = list(s_vals)
+            shap_calculated = True
+        else:
+            raise ValueError("SHAP package not available, using feature impact calculation")
     except Exception as e:
-        # Logistic Regression / Linear fallback or heuristic calculation
-        shap_vals_list = [(scaled_df[col].iloc[0] * 0.15) for col in required_features]
+        # Logistic Regression / Linear fallback or feature importance impact calculation
+        importances = getattr(classifier, "feature_importances_", np.array([0.25] * len(required_features)))
+        shap_vals_list = [float((scaled_df[col].iloc[0]) * imp * 0.4) for col, imp in zip(required_features, importances)]
         shap_calculated = True
+
 
     # Prepare Detailed Data Arrays for Custom Plotly Visualization
     for col in required_features:
