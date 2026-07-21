@@ -1,0 +1,21 @@
+# Data and raw analysis outputs (Excluded)
+data/
+output/
+scratch/
+.codegraph/
+*.whl
+*.html
+test_font.png
+
+# Root raw CSV files
+/*.csv
+
+# Python / Environment
+__pycache__/
+*.pyc
+.env
+.venv/
+venv/
+
+# Allow model assets inside web_app/model_assets
+!web_app/model_assets/*
