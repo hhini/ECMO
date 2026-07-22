@@ -1,7 +1,15 @@
 import os
 import sys
 import json
-import joblib
+
+try:
+    import joblib
+except ImportError:
+    try:
+        from sklearn.utils import _joblib as joblib
+    except ImportError:
+        import pickle as joblib
+
 import numpy as np
 import pandas as pd
 import streamlit as st
