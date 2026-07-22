@@ -4,19 +4,21 @@ import json
 
 try:
     import joblib
-except ImportError:
+except Exception:
     try:
         from sklearn.utils import _joblib as joblib
-    except ImportError:
+    except Exception:
         import pickle as joblib
 
 import numpy as np
 import pandas as pd
 import streamlit as st
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import plotly.graph_objects as go
+
+try:
+    import plotly.graph_objects as go
+    HAS_PLOTLY = True
+except Exception:
+    HAS_PLOTLY = False
 
 try:
     import shap
@@ -24,10 +26,6 @@ try:
 except Exception:
     HAS_SHAP = False
 
-
-# Configure Matplotlib fonts for crisp rendering
-plt.rcParams['font.sans-serif'] = ['SimHei', 'Microsoft YaHei', 'Arial Unicode MS', 'DejaVu Sans', 'sans-serif']
-plt.rcParams['axes.unicode_minus'] = False
 
 # Set Page Config
 st.set_page_config(
