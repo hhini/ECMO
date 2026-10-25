@@ -1,0 +1,764 @@
+{
+    "random_seed": 30,
+    "test_size": 0.3,
+    "final_features": [
+        "Sex",
+        "Age",
+        "BMI",
+        "Work_Status",
+        "Smoking",
+        "Drinking",
+        "Underlying_Hypertension",
+        "Underlying_Diabetes",
+        "Underlying_CHD",
+        "Underlying_Cerebrovascular",
+        "Underlying_Hyperlipidemia",
+        "History_Surgery",
+        "Pre_ECMO_Surgery",
+        "Autologous_Transfusion",
+        "ECMO_Consciousness_Intra",
+        "Vasoactive_Drugs_Count",
+        "Anticoagulant_Types_Count",
+        "Anticoagulant_Duration",
+        "Invasive_Lines_Count",
+        "Transfusion_Types_Count",
+        "Parenteral_Nutrition",
+        "Ventilation_Duration",
+        "ICU_Duration",
+        "Cannulation_Size",
+        "Mode_Conversion",
+        "Multiple_Cannulation",
+        "ECMO_Duration",
+        "Residence_1.0",
+        "Residence_2.0",
+        "Residence_3.0",
+        "Occupation_1.0",
+        "Occupation_2.0",
+        "Occupation_3.0",
+        "Pregnancy_1.0",
+        "Pregnancy_2.0",
+        "Pregnancy_3.0",
+        "Consciousness_Pre_1.0",
+        "Consciousness_Pre_2.0",
+        "Consciousness_Pre_3.0",
+        "Diagnosis_Primary_1.0",
+        "Diagnosis_Primary_2.0",
+        "Diagnosis_Primary_3.0",
+        "Diagnosis_Secondary_1.0",
+        "Diagnosis_Secondary_2.0",
+        "Diagnosis_Secondary_3.0",
+        "Concomitant_Hemofiltration_1.0",
+        "Concomitant_Hemofiltration_2.0",
+        "ECMO_Mode_1.0",
+        "ECMO_Mode_2.0",
+        "Cannulation_Site_1.0",
+        "Cannulation_Site_2.0",
+        "Cannulation_Site_3.0",
+        "Collateral_Circulation_1.0",
+        "Collateral_Circulation_2.0",
+        "DD_D0",
+        "FIB_D0",
+        "TT_D0",
+        "APTT_D0",
+        "PT_D0",
+        "INR_D0",
+        "AT3_D0",
+        "PLT_D0",
+        "WBC_D0",
+        "RBC_D0",
+        "Hb_D0",
+        "ALT_D0",
+        "AST_D0",
+        "Creatinine_D0",
+        "pH_D0",
+        "PaO2_D0",
+        "PaCO2_D0",
+        "DD_D2",
+        "FIB_D2",
+        "TT_D2",
+        "APTT_D2",
+        "PT_D2",
+        "INR_D2",
+        "AT3_D2",
+        "PLT_D2",
+        "WBC_D2",
+        "RBC_D2",
+        "Hb_D2",
+        "PCT_D2",
+        "ALT_D2",
+        "AST_D2",
+        "Albumin_D2",
+        "Creatinine_D2",
+        "pH_D2",
+        "PaO2_D2",
+        "PaCO2_D2",
+        "DD_D7",
+        "FIB_D7",
+        "TT_D7",
+        "APTT_D7",
+        "PT_D7",
+        "INR_D7",
+        "PLT_D7",
+        "WBC_D7",
+        "RBC_D7",
+        "Hb_D7",
+        "ALT_D7",
+        "AST_D7",
+        "Albumin_D7",
+        "Creatinine_D7",
+        "pH_D7",
+        "PaO2_D7",
+        "PaCO2_D7",
+        "DD_Wean",
+        "FIB_Wean",
+        "TT_Wean",
+        "APTT_Wean",
+        "PT_Wean",
+        "INR_Wean",
+        "AT3_Wean",
+        "PLT_Wean",
+        "WBC_Wean",
+        "RBC_Wean",
+        "Hb_Wean",
+        "ALT_Wean",
+        "AST_Wean",
+        "Albumin_Wean",
+        "Creatinine_Wean",
+        "pH_Wean",
+        "PaO2_Wean",
+        "PaCO2_Wean"
+    ],
+    "continuous_features": [
+        "Age",
+        "BMI",
+        "Smoking",
+        "Vasoactive_Drugs_Count",
+        "Anticoagulant_Types_Count",
+        "Anticoagulant_Duration",
+        "Invasive_Lines_Count",
+        "Transfusion_Types_Count",
+        "Ventilation_Duration",
+        "ICU_Duration",
+        "Cannulation_Size",
+        "ECMO_Duration",
+        "DD_D0",
+        "FIB_D0",
+        "TT_D0",
+        "APTT_D0",
+        "PT_D0",
+        "INR_D0",
+        "AT3_D0",
+        "PLT_D0",
+        "WBC_D0",
+        "RBC_D0",
+        "Hb_D0",
+        "ALT_D0",
+        "AST_D0",
+        "Creatinine_D0",
+        "pH_D0",
+        "PaO2_D0",
+        "PaCO2_D0",
+        "DD_D2",
+        "FIB_D2",
+        "TT_D2",
+        "APTT_D2",
+        "PT_D2",
+        "INR_D2",
+        "AT3_D2",
+        "PLT_D2",
+        "WBC_D2",
+        "RBC_D2",
+        "Hb_D2",
+        "PCT_D2",
+        "ALT_D2",
+        "AST_D2",
+        "Albumin_D2",
+        "Creatinine_D2",
+        "pH_D2",
+        "PaO2_D2",
+        "PaCO2_D2",
+        "DD_D7",
+        "FIB_D7",
+        "TT_D7",
+        "APTT_D7",
+        "PT_D7",
+        "INR_D7",
+        "PLT_D7",
+        "WBC_D7",
+        "RBC_D7",
+        "Hb_D7",
+        "ALT_D7",
+        "AST_D7",
+        "Albumin_D7",
+        "Creatinine_D7",
+        "pH_D7",
+        "PaO2_D7",
+        "PaCO2_D7",
+        "DD_Wean",
+        "FIB_Wean",
+        "TT_Wean",
+        "APTT_Wean",
+        "PT_Wean",
+        "INR_Wean",
+        "AT3_Wean",
+        "PLT_Wean",
+        "WBC_Wean",
+        "RBC_Wean",
+        "Hb_Wean",
+        "ALT_Wean",
+        "AST_Wean",
+        "Albumin_Wean",
+        "Creatinine_Wean",
+        "pH_Wean",
+        "PaO2_Wean",
+        "PaCO2_Wean"
+    ],
+    "binary_and_dummy_features": [
+        "Sex",
+        "Work_Status",
+        "Drinking",
+        "Underlying_Hypertension",
+        "Underlying_Diabetes",
+        "Underlying_CHD",
+        "Underlying_Cerebrovascular",
+        "Underlying_Hyperlipidemia",
+        "History_Surgery",
+        "Pre_ECMO_Surgery",
+        "Autologous_Transfusion",
+        "ECMO_Consciousness_Intra",
+        "Parenteral_Nutrition",
+        "Mode_Conversion",
+        "Multiple_Cannulation",
+        "Residence_1.0",
+        "Residence_2.0",
+        "Residence_3.0",
+        "Occupation_1.0",
+        "Occupation_2.0",
+        "Occupation_3.0",
+        "Pregnancy_1.0",
+        "Pregnancy_2.0",
+        "Pregnancy_3.0",
+        "Consciousness_Pre_1.0",
+        "Consciousness_Pre_2.0",
+        "Consciousness_Pre_3.0",
+        "Diagnosis_Primary_1.0",
+        "Diagnosis_Primary_2.0",
+        "Diagnosis_Primary_3.0",
+        "Diagnosis_Secondary_1.0",
+        "Diagnosis_Secondary_2.0",
+        "Diagnosis_Secondary_3.0",
+        "Concomitant_Hemofiltration_1.0",
+        "Concomitant_Hemofiltration_2.0",
+        "ECMO_Mode_1.0",
+        "ECMO_Mode_2.0",
+        "Cannulation_Site_1.0",
+        "Cannulation_Site_2.0",
+        "Cannulation_Site_3.0",
+        "Collateral_Circulation_1.0",
+        "Collateral_Circulation_2.0"
+    ],
+    "scaler_mean": {
+        "Age": 54.90107526881721,
+        "BMI": 22.117994623655914,
+        "Smoking": 7.016129032258065,
+        "Vasoactive_Drugs_Count": 1.978494623655914,
+        "Anticoagulant_Types_Count": 0.978494623655914,
+        "Anticoagulant_Duration": 6.87258064516129,
+        "Invasive_Lines_Count": 5.349462365591398,
+        "Transfusion_Types_Count": 2.8655913978494625,
+        "Ventilation_Duration": 11.068817204301077,
+        "ICU_Duration": 12.526344086021506,
+        "Cannulation_Size": 21.003225806451614,
+        "ECMO_Duration": 139.88548387096776,
+        "DD_D0": 6.7769400529422485,
+        "FIB_D0": 3.2307657081029135,
+        "TT_D0": 31.128732161750893,
+        "APTT_D0": 40.56131567240032,
+        "PT_D0": 18.63977304188198,
+        "INR_D0": 1.4432406959639226,
+        "AT3_D0": 72.23420055250307,
+        "PLT_D0": 198.87207841841968,
+        "WBC_D0": 11.633902331245022,
+        "RBC_D0": 4.15968727701861,
+        "Hb_D0": 121.85441515570143,
+        "ALT_D0": 152.36409757759426,
+        "AST_D0": 313.2387696541696,
+        "Creatinine_D0": 138.35756202656685,
+        "pH_D0": 7.365016129032258,
+        "PaO2_D0": 108.74731182795699,
+        "PaCO2_D0": 36.7494623655914,
+        "DD_D2": 8.931653446616638,
+        "FIB_D2": 3.037053031348869,
+        "TT_D2": 50.77602675723979,
+        "APTT_D2": 63.890126011758575,
+        "PT_D2": 23.8491901484953,
+        "INR_D2": 1.6836895487667625,
+        "AT3_D2": 57.8028940692203,
+        "PLT_D2": 129.67812547327696,
+        "WBC_D2": 13.127236559139785,
+        "RBC_D2": 3.2075752688172052,
+        "Hb_D2": 94.17204301075269,
+        "PCT_D2": 16.5902688172043,
+        "ALT_D2": 373.3306451612904,
+        "AST_D2": 898.6618279569894,
+        "Albumin_D2": 33.15349462365592,
+        "Creatinine_D2": 152.5263440860215,
+        "pH_D2": 7.395860215053764,
+        "PaO2_D2": 142.58387096774192,
+        "PaCO2_D2": 37.236559139784944,
+        "DD_D7": 11.000956989247312,
+        "FIB_D7": 3.233198924731183,
+        "TT_D7": 33.8197311827957,
+        "APTT_D7": 40.327311827957,
+        "PT_D7": 14.394301075268817,
+        "INR_D7": 1.2359623655913978,
+        "PLT_D7": 119.96666666666667,
+        "WBC_D7": 13.258526881720432,
+        "RBC_D7": 3.1213010752688173,
+        "Hb_D7": 92.23440860215052,
+        "ALT_D7": 105.4129032258065,
+        "AST_D7": 205.19086021505376,
+        "Albumin_D7": 37.31569892473118,
+        "Creatinine_D7": 158.21989247311828,
+        "pH_D7": 7.424591397849462,
+        "PaO2_D7": 114.54408602150538,
+        "PaCO2_D7": 38.57204301075269,
+        "DD_Wean": 11.058166666666668,
+        "FIB_Wean": 2.976489247311828,
+        "TT_Wean": 35.43091397849463,
+        "APTT_Wean": 48.464838709677416,
+        "PT_Wean": 18.81639784946237,
+        "INR_Wean": 1.4994408602150537,
+        "AT3_Wean": 62.16181720430109,
+        "PLT_Wean": 125.23629569892474,
+        "WBC_Wean": 13.58128494623656,
+        "RBC_Wean": 3.1379301075268833,
+        "Hb_Wean": 90.10860215053764,
+        "ALT_Wean": 227.79892473118284,
+        "AST_Wean": 592.7720430107527,
+        "Albumin_Wean": 35.12354838709677,
+        "Creatinine_Wean": 161.53440860215053,
+        "pH_Wean": 7.408134408602151,
+        "PaO2_Wean": 133.16290322580645,
+        "PaCO2_Wean": 38.04032258064516
+    },
+    "scaler_scale": {
+        "Age": 14.494893387937282,
+        "BMI": 2.5221768381022116,
+        "Smoking": 10.995343983554312,
+        "Vasoactive_Drugs_Count": 0.7105729117228722,
+        "Anticoagulant_Types_Count": 0.23087000595251492,
+        "Anticoagulant_Duration": 5.463232511005075,
+        "Invasive_Lines_Count": 1.1692405085623836,
+        "Transfusion_Types_Count": 1.1585117096651976,
+        "Ventilation_Duration": 8.653589950483088,
+        "ICU_Duration": 10.639517511186874,
+        "Cannulation_Size": 0.030940848537502594,
+        "ECMO_Duration": 82.32266606726111,
+        "DD_D0": 9.134643236245793,
+        "FIB_D0": 1.405899976497227,
+        "TT_D0": 36.69622347450156,
+        "APTT_D0": 23.428509393646117,
+        "PT_D0": 17.68824576994143,
+        "INR_D0": 0.756104679211122,
+        "AT3_D0": 19.731451930667536,
+        "PLT_D0": 87.97905003450398,
+        "WBC_D0": 6.44947323343586,
+        "RBC_D0": 1.1919525221403722,
+        "Hb_D0": 32.93443178394367,
+        "ALT_D0": 277.2264970198179,
+        "AST_D0": 523.5815699715149,
+        "Creatinine_D0": 104.96420537796494,
+        "pH_D0": 0.1213456019647948,
+        "PaO2_D0": 79.68886181314681,
+        "PaCO2_D0": 10.787641013478362,
+        "DD_D2": 9.537649226961285,
+        "FIB_D2": 1.2329941908818198,
+        "TT_D2": 51.94695928380214,
+        "APTT_D2": 43.74328316625754,
+        "PT_D2": 30.105816641678036,
+        "INR_D2": 0.8929854481035241,
+        "AT3_D2": 15.397339986117021,
+        "PLT_D2": 69.39130539152156,
+        "WBC_D2": 6.139446242055839,
+        "RBC_D2": 0.8894706319419958,
+        "Hb_D2": 24.544997587671407,
+        "PCT_D2": 34.250197212096786,
+        "ALT_D2": 889.0469838641059,
+        "AST_D2": 2339.6425175125737,
+        "Albumin_D2": 4.950138142144639,
+        "Creatinine_D2": 88.88936206155134,
+        "pH_D2": 0.0980019849917304,
+        "PaO2_D2": 106.16227768006823,
+        "PaCO2_D2": 9.391772136258725,
+        "DD_D7": 9.802601302401776,
+        "FIB_D7": 1.4935433784568084,
+        "TT_D7": 42.98723116469945,
+        "APTT_D7": 21.555677401965415,
+        "PT_D7": 4.010274277443056,
+        "INR_D7": 0.3072497166289948,
+        "PLT_D7": 67.00205434714933,
+        "WBC_D7": 5.233373075168733,
+        "RBC_D7": 0.4961962906109316,
+        "Hb_D7": 13.619494998166683,
+        "ALT_D7": 182.16078069024329,
+        "AST_D7": 574.7110557295333,
+        "Albumin_D7": 4.268096109974252,
+        "Creatinine_D7": 101.7012130111801,
+        "pH_D7": 0.059250876597869116,
+        "PaO2_D7": 45.97990377378323,
+        "PaCO2_D7": 5.742322889754032,
+        "DD_Wean": 11.043534233297201,
+        "FIB_Wean": 1.5074443765099514,
+        "TT_Wean": 43.02822426389948,
+        "APTT_Wean": 32.635608879098136,
+        "PT_Wean": 16.35875045122907,
+        "INR_Wean": 0.7907773358471938,
+        "AT3_Wean": 21.199595410749918,
+        "PLT_Wean": 82.59925975247711,
+        "WBC_Wean": 7.236343803463454,
+        "RBC_Wean": 1.1262099003910089,
+        "Hb_Wean": 18.99365007594136,
+        "ALT_Wean": 651.6976281583593,
+        "AST_Wean": 2155.4758832823795,
+        "Albumin_Wean": 5.8662746041699805,
+        "Creatinine_Wean": 105.05819610452234,
+        "pH_Wean": 0.09515903891389317,
+        "PaO2_Wean": 91.29626854757574,
+        "PaCO2_Wean": 8.114987654157249
+    },
+    "clipping_limits": {
+        "Age": [
+            18.0,
+            78.30000000000001
+        ],
+        "BMI": [
+            16.34,
+            28.41350000000002
+        ],
+        "Smoking": [
+            0.0,
+            40.0
+        ],
+        "Vasoactive_Drugs_Count": [
+            0.0,
+            3.0
+        ],
+        "Anticoagulant_Types_Count": [
+            0.0,
+            2.0
+        ],
+        "Anticoagulant_Duration": [
+            0.0,
+            32.150000000000006
+        ],
+        "Invasive_Lines_Count": [
+            4.0,
+            8.0
+        ],
+        "Transfusion_Types_Count": [
+            0.0,
+            5.0
+        ],
+        "Ventilation_Duration": [
+            1.0,
+            39.900000000000034
+        ],
+        "ICU_Duration": [
+            1.0,
+            56.45000000000002
+        ],
+        "Cannulation_Size": [
+            21.0,
+            21.30000000000001
+        ],
+        "ECMO_Duration": [
+            24.0,
+            370.5000000000004
+        ],
+        "DD_D0": [
+            0.08549999999999999,
+            41.13850000000001
+        ],
+        "FIB_D0": [
+            0.938,
+            7.040500000000001
+        ],
+        "TT_D0": [
+            13.51,
+            165.0
+        ],
+        "APTT_D0": [
+            21.85,
+            151.00000000000023
+        ],
+        "PT_D0": [
+            9.98,
+            126.05000000000004
+        ],
+        "INR_D0": [
+            0.904,
+            5.319694088988926
+        ],
+        "AT3_D0": [
+            21.26,
+            121.24000000000005
+        ],
+        "PLT_D0": [
+            59.1,
+            435.7000000000001
+        ],
+        "WBC_D0": [
+            1.6320000000000001,
+            31.309500000000007
+        ],
+        "RBC_D0": [
+            1.8635,
+            8.405000000000003
+        ],
+        "Hb_D0": [
+            52.55,
+            219.84260859445345
+        ],
+        "ALT_D0": [
+            6.7,
+            1773.7000000000005
+        ],
+        "AST_D0": [
+            11.85,
+            2951.6000000000004
+        ],
+        "Creatinine_D0": [
+            33.7,
+            703.3500000000014
+        ],
+        "pH_D0": [
+            6.954,
+            7.6475
+        ],
+        "PaO2_D0": [
+            29.55,
+            449.9500000000004
+        ],
+        "PaCO2_D0": [
+            14.85,
+            76.35000000000005
+        ],
+        "DD_D2": [
+            0.421,
+            46.24100000000002
+        ],
+        "FIB_D2": [
+            0.7435,
+            6.479500000000002
+        ],
+        "TT_D2": [
+            13.54,
+            176.50000000000006
+        ],
+        "APTT_D2": [
+            27.27,
+            185.0
+        ],
+        "PT_D2": [
+            10.385,
+            176.50000000000006
+        ],
+        "INR_D2": [
+            0.9425,
+            5.567625803267793
+        ],
+        "AT3_D2": [
+            22.55,
+            97.8600000000001
+        ],
+        "PLT_D2": [
+            24.7,
+            371.65000000000055
+        ],
+        "WBC_D2": [
+            0.987,
+            32.70600000000006
+        ],
+        "RBC_D2": [
+            1.5390000000000001,
+            6.060500000000004
+        ],
+        "Hb_D2": [
+            42.85,
+            157.15
+        ],
+        "PCT_D2": [
+            0.01,
+            216.50000000000006
+        ],
+        "ALT_D2": [
+            6.7,
+            4962.050000000006
+        ],
+        "AST_D2": [
+            16.0,
+            14326.550000000008
+        ],
+        "Albumin_D2": [
+            17.585,
+            41.94000000000001
+        ],
+        "Creatinine_D2": [
+            30.0,
+            447.95000000000005
+        ],
+        "pH_D2": [
+            7.093999999999999,
+            7.596
+        ],
+        "PaO2_D2": [
+            35.4,
+            490.4000000000001
+        ],
+        "PaCO2_D2": [
+            17.55,
+            71.95000000000007
+        ],
+        "DD_D7": [
+            1.1465,
+            50.667500000000004
+        ],
+        "FIB_D7": [
+            0.6849999999999999,
+            6.8375
+        ],
+        "TT_D7": [
+            13.084999999999999,
+            166.50000000000006
+        ],
+        "APTT_D7": [
+            24.34,
+            139.50000000000017
+        ],
+        "PT_D7": [
+            10.770000000000001,
+            36.4
+        ],
+        "INR_D7": [
+            0.9585,
+            2.8760000000000026
+        ],
+        "PLT_D7": [
+            18.95,
+            383.95000000000005
+        ],
+        "WBC_D7": [
+            4.061,
+            30.147000000000027
+        ],
+        "RBC_D7": [
+            1.888,
+            4.298000000000001
+        ],
+        "Hb_D7": [
+            58.5,
+            131.3
+        ],
+        "ALT_D7": [
+            4.85,
+            1200.2000000000048
+        ],
+        "AST_D7": [
+            13.0,
+            4093.250000000002
+        ],
+        "Albumin_D7": [
+            26.785,
+            52.12500000000001
+        ],
+        "Creatinine_D7": [
+            34.4,
+            538.0500000000002
+        ],
+        "pH_D7": [
+            7.2555,
+            7.5515
+        ],
+        "PaO2_D7": [
+            35.95,
+            280.15000000000043
+        ],
+        "PaCO2_D7": [
+            26.0,
+            53.200000000000045
+        ],
+        "DD_Wean": [
+            0.6120000000000001,
+            59.99750000000002
+        ],
+        "FIB_Wean": [
+            0.42650000000000005,
+            6.442
+        ],
+        "TT_Wean": [
+            12.975,
+            166.50000000000006
+        ],
+        "APTT_Wean": [
+            20.53,
+            185.0
+        ],
+        "PT_Wean": [
+            10.925,
+            134.4000000000002
+        ],
+        "INR_Wean": [
+            0.944,
+            5.589000000000032
+        ],
+        "AT3_Wean": [
+            10.074,
+            102.55000000000001
+        ],
+        "PLT_Wean": [
+            9.275500000000001,
+            382.20000000000005
+        ],
+        "WBC_Wean": [
+            1.754,
+            39.39550000000001
+        ],
+        "RBC_Wean": [
+            1.405,
+            11.342500000000161
+        ],
+        "Hb_Wean": [
+            42.0,
+            144.60000000000002
+        ],
+        "ALT_Wean": [
+            4.85,
+            4244.450000000003
+        ],
+        "AST_Wean": [
+            16.0,
+            15444.300000000001
+        ],
+        "Albumin_Wean": [
+            21.240000000000002,
+            52.20000000000001
+        ],
+        "Creatinine_Wean": [
+            30.85,
+            525.3500000000001
+        ],
+        "pH_Wean": [
+            7.1085,
+            7.563
+        ],
+        "PaO2_Wean": [
+            29.25,
+            506.90000000000015
+        ],
+        "PaCO2_Wean": [
+            21.4,
+            62.35000000000005
+        ]
+    }
+}
