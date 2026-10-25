@@ -1,7 +1,9 @@
 # Data and raw analysis outputs (Excluded)
 data/
+testdata/
 output/
 scratch/
+.agents/
 .codegraph/
 *.whl
 *.html
