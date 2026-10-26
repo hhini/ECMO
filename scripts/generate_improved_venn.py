@@ -8,6 +8,7 @@ Requirements:
 - No right-side panel (右边的不需要)
 - Pure Venn diagram only (就是venn图就行)
 - No small annotations above or below (上面和下面的小字也不要)
+- Clean, moderate-sized numbers without any wrapping circles (数字别太大，别是圆包裹，不大不小)
 """
 
 import os
@@ -20,9 +21,9 @@ def create_pure_english_venn(output_paths):
     plt.rcParams['font.sans-serif'] = ['Arial', 'Helvetica', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False
     
-    # 1:1 Aspect ratio, 300 DPI publication resolution
-    fig = plt.figure(figsize=(8.5, 7.8), facecolor='white', dpi=300)
-    ax = fig.add_axes([0.04, 0.04, 0.92, 0.92])
+    # Clean balanced aspect ratio, 300 DPI publication resolution
+    fig = plt.figure(figsize=(8.0, 7.2), facecolor='white', dpi=300)
+    ax = fig.add_axes([0.05, 0.05, 0.90, 0.90])
     ax.set_facecolor('white')
     ax.set_xlim(-2.15, 2.15)
     ax.set_ylim(-2.15, 1.95)
@@ -39,33 +40,29 @@ def create_pure_english_venn(output_paths):
     color_t2 = '#DC2626'  # Crimson Red
     color_t3 = '#0D9488'  # Emerald Teal
     
-    circle1 = Circle(c1, r, facecolor=color_t1, alpha=0.18, edgecolor=color_t1, lw=2.6, zorder=2)
-    circle2 = Circle(c2, r, facecolor=color_t2, alpha=0.16, edgecolor=color_t2, lw=2.6, zorder=2)
-    circle3 = Circle(c3, r, facecolor=color_t3, alpha=0.16, edgecolor=color_t3, lw=2.6, zorder=2)
+    circle1 = Circle(c1, r, facecolor=color_t1, alpha=0.18, edgecolor=color_t1, lw=2.4, zorder=2)
+    circle2 = Circle(c2, r, facecolor=color_t2, alpha=0.16, edgecolor=color_t2, lw=2.4, zorder=2)
+    circle3 = Circle(c3, r, facecolor=color_t3, alpha=0.16, edgecolor=color_t3, lw=2.4, zorder=2)
     
     ax.add_patch(circle1)
     ax.add_patch(circle2)
     ax.add_patch(circle3)
     
     # Pure English Set Labels - Bold, elegant, professional typography
-    ax.text(c1[0] - 0.28, c1[1] + r + 0.12, 'Stepwise Logistic Regression\n(5 Features)',
-            fontsize=12, fontweight='bold', color='#1E3A8A', ha='center', va='bottom', linespacing=1.2, zorder=5)
+    ax.text(c1[0] - 0.25, c1[1] + r + 0.12, 'Stepwise Logistic Regression\n(5 Features)',
+            fontsize=11.5, fontweight='bold', color='#1E3A8A', ha='center', va='bottom', linespacing=1.2, zorder=5)
     
-    ax.text(c2[0] + 0.28, c2[1] + r + 0.12, 'LASSO Regularization\n(4 Features)',
-            fontsize=12, fontweight='bold', color='#991B1B', ha='center', va='bottom', linespacing=1.2, zorder=5)
+    ax.text(c2[0] + 0.25, c2[1] + r + 0.12, 'LASSO Regularization\n(4 Features)',
+            fontsize=11.5, fontweight='bold', color='#991B1B', ha='center', va='bottom', linespacing=1.2, zorder=5)
     
     ax.text(c3[0], c3[1] - r - 0.14, 'Boruta Algorithm\n(5 Features)',
-            fontsize=12, fontweight='bold', color='#0F766E', ha='center', va='top', linespacing=1.2, zorder=5)
+            fontsize=11.5, fontweight='bold', color='#0F766E', ha='center', va='top', linespacing=1.2, zorder=5)
     
-    # Center 3-way intersection (4 core features: DD_Late, DD_D0, FIB_D2, WBC_D0)
-    center_circle = Circle((0.00, 0.05), 0.38, facecolor='#FEF9C3', edgecolor='#EAB308', lw=2.2, zorder=4)
-    ax.add_patch(center_circle)
-    ax.text(0.00, 0.05, '4', fontsize=22, fontweight='bold', color='#854D0E', ha='center', va='center', zorder=6)
+    # Center 3-way intersection: Plain moderate-sized number without any enclosing circle
+    ax.text(0.00, 0.05, '4', fontsize=14, fontweight='bold', color='#1E293B', ha='center', va='center', zorder=6)
     
-    # 2-way overlap between Track 1 & Track 3 (1 feature: ALT_D7)
-    alt_circle = Circle((-0.55, -0.30), 0.26, facecolor='#ECFDF5', edgecolor='#10B981', lw=1.8, zorder=4)
-    ax.add_patch(alt_circle)
-    ax.text(-0.55, -0.30, '1', fontsize=16, fontweight='bold', color='#065F46', ha='center', va='center', zorder=6)
+    # 2-way overlap between Track 1 & Track 3: Plain moderate-sized number without any enclosing circle
+    ax.text(-0.55, -0.30, '1', fontsize=13, fontweight='bold', color='#1E293B', ha='center', va='center', zorder=6)
     
     for path in output_paths:
         os.makedirs(os.path.dirname(path), exist_ok=True)
