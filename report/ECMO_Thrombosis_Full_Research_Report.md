@@ -689,8 +689,8 @@
 
 
 
-![图5. 三轨正交特征筛选共识多重宇宙 Venn 全景图（全新Lancet/CNS顶刊无重叠设计：单/多因素子集 ∩ LASSO稀疏子集 ∩ Boruta阴影置换子集，5大黄金标志物卡片精准呼应）](sci_figures/fig05_step4_three_track_venn_diagram.png)
-*图5. 三轨正交特征筛选共识多重宇宙 Venn 全景图（全新Lancet/CNS顶刊无重叠设计：单/多因素子集 ∩ LASSO稀疏子集 ∩ Boruta阴影置换子集，5大黄金标志物卡片精准呼应）*
+![图5. 三轨正交特征筛选共识 Venn 图（纯净全英文排版：逐步 Logistic 回归 ∩ LASSO 正则化 ∩ Boruta 阴影置换算法，交集收敛于核心生物标志物）](sci_figures/fig05_step4_three_track_venn_diagram.png)
+*图5. 三轨正交特征筛选共识 Venn 图（纯净全英文排版：逐步 Logistic 回归 ∩ LASSO 正则化 ∩ Boruta 阴影置换算法，交集收敛于核心生物标志物）*
 
 
 ![图7. 5大核心预测因子的 Spearman 秩相关系数热图与共线性层级聚类图（所有 VIF < 1.5，确认无任何多重共线性干扰）](sci_figures/fig07_correlation_heatmap.png)

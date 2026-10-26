@@ -657,8 +657,8 @@ def build_full_report():
     add_custom_table(doc, t12_data, t12_title)
     md_output_lines.append(table_to_markdown(t12_data, t12_title))
 
-    # Newly redesigned Figure 5 Venn Diagram
-    add_image_box("fig05_step4_three_track_venn_diagram.png", "图5. 三轨正交特征筛选共识多重宇宙 Venn 全景图（全新Lancet/CNS顶刊无重叠设计：单/多因素子集 ∩ LASSO稀疏子集 ∩ Boruta阴影置换子集，5大黄金标志物卡片精准呼应）")
+    # Newly redesigned Figure 5 Venn Diagram (Pure English, No Title, No Right Panel, No Small Annotations)
+    add_image_box("fig05_step4_three_track_venn_diagram.png", "图5. 三轨正交特征筛选共识 Venn 图（纯净全英文排版：逐步 Logistic 回归 ∩ LASSO 正则化 ∩ Boruta 阴影置换算法，交集收敛于核心生物标志物）")
     add_image_box("fig07_correlation_heatmap.png", "图7. 5大核心预测因子的 Spearman 秩相关系数热图与共线性层级聚类图（所有 VIF < 1.5，确认无任何多重共线性干扰）")
 
     # =========================================================================
