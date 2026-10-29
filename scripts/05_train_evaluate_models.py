@@ -98,12 +98,12 @@ for d in [DIR_M5_TRAINING, DIR_M3_TRAINING, MODEL_ASSETS_DIR, REPORT_FIG_DIR, WE
     d.mkdir(parents=True, exist_ok=True)
 
 RANDOM_SEED = 30
-CV_FOLDS = 5
+CV_FOLDS = 10
 CALIBRATION_FOLDS = 5
 
 TARGET_COLUMN = "是否下肢血栓"
-CONSENSUS_FEATURES = ["DD_D0", "DD_Late", "WBC_D0", "ALT_D7", "FIB_D2"]
-CANONICAL_MODELS = ["LR", "SVM", "RF", "DT", "XGB", "LGBM", "NB"]
+CONSENSUS_FEATURES = ["AT3_D2", "DD_D0", "Delta_DD_Late", "Delta_FIB", "FIB_D2"]
+CANONICAL_MODELS = ["LR", "SVM", "RF", "DT", "XGB", "NB"]
 
 # Setup Logging
 logger = logging.getLogger("05_train_evaluate_models")
@@ -294,8 +294,43 @@ def compute_dca_treat_all(y_true: np.ndarray, threshold: float) -> float:
 # ==============================================================================
 # 3. DATA INGESTION & COHORT HARMONIZATION
 # ==============================================================================
+def extract_consensus_features(df_raw: pd.DataFrame) -> pd.DataFrame:
+    """Extract and engineer the 5 consensus pro-thrombotic biomarkers with robust dynamic calculations."""
+    def parse_num(col_name: str) -> pd.Series:
+        if col_name in df_raw.columns:
+            s = df_raw[col_name].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            return pd.to_numeric(s, errors="coerce")
+        return pd.Series(np.nan, index=df_raw.index)
+
+    X = pd.DataFrame(index=df_raw.index)
+    
+    # Baseline & longitudinal DD
+    dd0 = parse_num("上机前DD").clip(lower=0)
+    c_dd_late = "上机第七天DD" if "上机第七天DD" in df_raw.columns else ("下机当天DD" if "下机当天DD" in df_raw.columns else "DD.2")
+    dd_late = parse_num(c_dd_late).clip(lower=0)
+    dd2 = parse_num("上机第二天DD").clip(lower=0)
+    dd_late = dd_late.fillna(dd2)
+    
+    # Fibrinogen
+    fib0 = parse_num("FIB").clip(lower=0.1)
+    fib2 = parse_num("FIB.1").clip(lower=0.1)
+    
+    # Antithrombin III
+    at2 = parse_num("AT3.1").clip(lower=0)
+    if at2.isna().all() and "AT3" in df_raw.columns:
+        at2 = parse_num("AT3").clip(lower=0)
+        
+    X["AT3_D2"] = at2
+    X["DD_D0"] = np.log1p(dd0)
+    X["Delta_DD_Late"] = dd_late - dd0
+    X["Delta_FIB"] = fib2 - fib0
+    X["FIB_D2"] = fib2
+    
+    return X[CONSENSUS_FEATURES]
+
+
 def load_and_harmonize_stage1_data() -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
-    """Ingest Stage 1 data and harmonize consensus pro-thrombotic biomarkers ['DD_D0', 'DD_Late', 'WBC_D0', 'ALT_D7', 'FIB_D2'].
+    """Ingest Stage 1 data and harmonize consensus pro-thrombotic biomarkers ['AT3_D2', 'DD_D0', 'Delta_DD_Late', 'Delta_FIB', 'FIB_D2'].
     
     Returns:
         X_full, y_full, X_train, y_train, X_test, y_test
@@ -309,42 +344,8 @@ def load_and_harmonize_stage1_data() -> Tuple[pd.DataFrame, pd.Series, pd.DataFr
         raise ValueError(f"Target column '{TARGET_COLUMN}' not found in {STAGE1_DATA_PATH}")
     y_full = df_raw[TARGET_COLUMN].astype(int)
     
-    # Extract consensus features with robust clinical parsing
-    X_dict = {}
-    for feat in CONSENSUS_FEATURES:
-        if feat in df_raw.columns:
-            s = df_raw[feat].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        elif feat == "DD_D0":
-            c_dd0 = [c for c in df_raw.columns if "上机前DD" in c or c == "DD"]
-            s = df_raw[c_dd0[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_dd0 else pd.Series(dtype=float)
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        elif feat == "DD_Late":
-            c_dd15 = [c for c in df_raw.columns if "15" in c and "DD" in c]
-            if not c_dd15:
-                c_dd15 = [c for c in df_raw.columns if "第二天DD" in c or c == "DD.1"]
-            s = df_raw[c_dd15[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_dd15 else pd.Series(dtype=float)
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        elif feat == "WBC_D0":
-            c_wbc = [c for c in df_raw.columns if c == "WBC" or "WBC" in c]
-            s = df_raw[c_wbc[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_wbc else pd.Series(dtype=float)
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        elif feat == "ALT_D7":
-            c_alt7 = [c for c in df_raw.columns if c == "谷丙.2" or ("7" in c and "谷丙" in c)]
-            if not c_alt7:
-                c_alt7 = [c for c in df_raw.columns if "谷丙" in c]
-            s = df_raw[c_alt7[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_alt7 else pd.Series(dtype=float)
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        elif feat == "FIB_D2":
-            c_fib2 = [c for c in df_raw.columns if c == "FIB.1" or "第二天FIB" in c]
-            if not c_fib2:
-                c_fib2 = [c for c in df_raw.columns if "FIB" in c]
-            s = df_raw[c_fib2[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_fib2 else pd.Series(dtype=float)
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        else:
-            X_dict[feat] = np.zeros(len(df_raw))
-                
-    X_full = pd.DataFrame(X_dict, index=df_raw.index)
+    # Extract consensus features
+    X_full = extract_consensus_features(df_raw)
     
     # Fill missing values using median to guarantee complete baseline matrices
     medians = X_full.median()
@@ -904,16 +905,21 @@ def main():
             joblib.dump(calibrated_model, model_file)
             logger.info(f"Saved {name} calibrated model artifact to: {model_file}")
             
-    # Export selected_features.json to MODEL_ASSETS_DIR if needed
+    # Synchronize selected_features.json to MODEL_ASSETS_DIR preserving full selection metadata
+    m4_sel_json = PROJECT_ROOT / "output" / "04_feature_selection" / "selected_features.json"
     assets_sel_json = MODEL_ASSETS_DIR / "selected_features.json"
-    sel_data = {
-        "consensus_features": CONSENSUS_FEATURES,
-        "final_features": CONSENSUS_FEATURES,
-        "strict_intersection": CONSENSUS_FEATURES,
-    }
-    with open(assets_sel_json, "w", encoding="utf-8") as f:
-        json.dump(sel_data, f, indent=4)
-    logger.info(f"Updated {assets_sel_json} with consensus features.")
+    if m4_sel_json.exists():
+        shutil.copy(m4_sel_json, assets_sel_json)
+        logger.info(f"Synchronized full selection metadata from {m4_sel_json} to {assets_sel_json}")
+    else:
+        sel_data = {
+            "consensus_features": CONSENSUS_FEATURES,
+            "final_features": CONSENSUS_FEATURES,
+            "strict_intersection": CONSENSUS_FEATURES,
+        }
+        with open(assets_sel_json, "w", encoding="utf-8") as f:
+            json.dump(sel_data, f, indent=4)
+        logger.info(f"Updated {assets_sel_json} with consensus features.")
     
     logger.info("================================================================================")
     logger.info("MILESTONE 5 TRAINING & EVALUATION COMPLETED SUCCESSFULLY!")

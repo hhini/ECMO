@@ -275,8 +275,11 @@ def load_and_extract_all_features():
         # 10. Engineered Longitudinal Dynamic Biomarkers
         res['Delta_DD_Early'] = res['DD_D2'] - res['DD_D0']
         res['Delta_DD_Total'] = res['DD_Late'] - res['DD_D0']
+        res['Delta_DD_Late'] = res['DD_Late'] - res['DD_D0']
+        res['Delta_FIB'] = res['FIB_D2'] - res['FIB_D0']
         res['Relative_DD_Surge'] = (res['DD_D2'] - res['DD_D0']) / (res['DD_D0'] + 0.001) * 100.0
         res['DD_Slope'] = (res['DD_D2'] - res['DD_D0']) / np.clip(res['ECMO_Duration'], 24.0, 500.0)
+        res['FIB_DD_Ratio_D0'] = res['FIB_D0'] / (res['DD_D0'] + 0.001)
         res['FIB_DD_Ratio_D2'] = res['FIB_D2'] / (res['DD_D2'] + 0.001)
         res['Delta_PLT'] = res['PLT_D2'] - res['PLT_D0']
         res['Relative_PLT_Drop'] = (res['PLT_D2'] - res['PLT_D0']) / (res['PLT_D0'] + 0.001) * 100.0
@@ -444,10 +447,13 @@ EXTENDED_SPECIFICATIONS = [
     ("后期峰值与撤机转归指标", "撤机当天血小板计数 (Weaning PLT, ×10^9/L)", "PLT_Wean", "continuous", 1),
 
     # 10. Engineered Longitudinal Dynamic Biomarkers
+    ("动态衍生动力学特征", "48小时纤维蛋白原动态绝对差值 (ΔFIB, g/L) ★", "Delta_FIB", "continuous", 2),
+    ("动态衍生动力学特征", "D-二聚体峰值演化绝对激增量 (ΔDD_Late, mg/L) ★", "Delta_DD_Late", "continuous", 2),
     ("动态衍生动力学特征", "D-二聚体早期48h绝对激增量 (ΔDD_early, mg/L)", "Delta_DD_Early", "continuous", 2),
     ("动态衍生动力学特征", "D-二聚体全周期绝对激增量 (ΔDD_total, mg/L)", "Delta_DD_Total", "continuous", 2),
     ("动态衍生动力学特征", "D-二聚体早期相对激增倍率 (Relative DD Surge, %)", "Relative_DD_Surge", "continuous", 1),
     ("动态衍生动力学特征", "D-二聚体释放动力学时间斜率 (DD Slope, μg/(mL·h))", "DD_Slope", "continuous", 3),
+    ("动态衍生动力学特征", "基线纤维蛋白原/D-二聚体比值 (FIB/DD Ratio D0)", "FIB_DD_Ratio_D0", "continuous", 2),
     ("动态衍生动力学特征", "第 2 天纤维蛋白原/D-二聚体比值 (FIB/DD Ratio D2)", "FIB_DD_Ratio_D2", "continuous", 2),
     ("动态衍生动力学特征", "血小板消耗性动力学绝对降幅 (ΔPLT, ×10^9/L)", "Delta_PLT", "continuous", 1),
     ("动态衍生动力学特征", "血小板消耗相对降幅 (Relative PLT Drop Rate, %)", "Relative_PLT_Drop", "continuous", 1),
@@ -561,10 +567,13 @@ CLINICAL_PATHOPHYSIOLOGY_NOTES = {
     "DD_Wean": "参考值 < 0.50 mg/L；撤机当天终末纤溶水平，决定拔管后是否发生反跳性静脉血栓脱落",
     "FIB_Wean": "参考值 2.0 - 4.0 g/L；撤机当天纤维蛋白原水平，反映凝血底物储备与拔管后止血-血栓平衡",
     "PLT_Wean": "参考值 100 - 300 ×10^9/L；撤机当天血小板数量，关系到拔除大口径导管后的局部止血安全性",
+    "Delta_FIB": "正常范围 -0.5 - +0.5 g/L；48小时纤维蛋白原动态绝对差值，反映人工膜肺接触激活与急性期反应诱导的纤维蛋白原底物快速合成暴发",
+    "Delta_DD_Late": "正常范围 < 1.00 mg/L；D-二聚体峰值演化绝对激增量(DD_Late - DD_D0)，下肢静脉血栓组中位数激增达+10.80 mg/L，呈爆发式增高",
     "Delta_DD_Early": "正常范围 < 0.50 mg/L；48小时早期激增量，直接反映体外人工管路诱发的早期急性血栓形成负荷",
     "Delta_DD_Total": "正常范围 < 1.00 mg/L；全周期峰值激增量，血栓组平均激增高达+10.8 μg/mL，是特征指纹",
     "Relative_DD_Surge": "正常范围 < 50%；早期相对翻倍速率，消除基线量纲偏倚，定量刻画纤溶爆发的几何增速",
     "DD_Slope": "正常范围 < 0.05 μg/(mL·h)；释放动力学时间斜率，反映下肢大静脉血栓快速蔓延进展速度",
+    "FIB_DD_Ratio_D0": "正常范围 4.0 - 8.0；基线纤维蛋白原/D-二聚体比值，表征血栓网架形成底物与纤溶产物的基线生理平衡状态",
     "FIB_DD_Ratio_D2": "正常范围 4.0 - 8.0；第2天血栓交联底物(FIB)与裂解产物(DD)比值，失衡预示纤溶耗竭或凝块爆发",
     "Delta_PLT": "正常范围 ≥ -30 ×10^9/L；48小时血小板消耗量，大负值表征管路剪切捕获与广泛微血栓消耗",
     "Relative_PLT_Drop": "正常范围 > -20%；血小板相对跌幅，跌幅>30%常提示消耗性凝血紊乱与血栓高危",

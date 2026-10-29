@@ -93,15 +93,16 @@ logger.info(f"Compatibility Output Directory: {DIR_M4_EXTERNAL}")
 
 # Domain constants
 TARGET_COLUMN = "是否下肢血栓"
-CONSENSUS_FEATURES = ["DD_D0", "FIB_D0", "FIB_D2", "Underlying_Hyperlipidemia"]
+CONSENSUS_FEATURES = ["AT3_D2", "DD_D0", "Delta_DD_Late", "Delta_FIB", "FIB_D2"]
 MODEL_NAMES = ["LR", "SVM", "RF", "DT", "XGB", "NB"]
 
 # Baseline training medians for leakage-free imputation
 TRAIN_BASELINE_MEDIANS = {
+    "AT3_D2": 72.0,
     "DD_D0": 1.45,
-    "FIB_D0": 2.50,
+    "Delta_DD_Late": 0.0,
+    "Delta_FIB": 0.50,
     "FIB_D2": 2.80,
-    "Underlying_Hyperlipidemia": 0.0
 }
 
 # Publication aesthetics (Lancet / Nature standard)
@@ -296,43 +297,37 @@ def load_and_harmonize_stage2_data() -> Tuple[pd.DataFrame, pd.Series]:
     logger.info(f"Target Distribution: Total={len(y_stage2)}, Positive={pos_count}, Negative={neg_count} (Prevalence={pos_count/len(y_stage2)*100:.1f}%)")
     
     # Extract consensus features with robust clinical parsing
-    X_dict = {}
-    for feat in CONSENSUS_FEATURES:
-        if feat == "DD_D0":
-            src = "上机前DD" if "上机前DD" in df_raw.columns else "DD_D0"
-            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-            X_dict[feat] = np.log1p(pd.to_numeric(s, errors="coerce").clip(lower=0)).values
-        elif feat == "FIB_D0":
-            src = "FIB" if "FIB" in df_raw.columns else "FIB_D0"
-            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        elif feat == "FIB_D2":
-            src = "FIB.1" if "FIB.1" in df_raw.columns else "FIB_D2"
-            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        elif feat == "Underlying_Hyperlipidemia":
-            if "Underlying_Hyperlipidemia" in df_raw.columns:
-                X_dict[feat] = pd.to_numeric(df_raw["Underlying_Hyperlipidemia"], errors="coerce").fillna(0).values
-            else:
-                comorb = df_raw["基础疾病"].fillna("无").astype(str)
-                X_dict[feat] = comorb.map(lambda x: 1 if "高脂血症" in x else 0).values
-        elif feat in df_raw.columns:
-            s = df_raw[feat].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        else:
-            col_map = {"APTT": "APTT_D0", "PLT.1": "PLT_D2", "WBC": "WBC_D0", "FIB.1": "FIB_D2"}
-            rev_cands = [k for k, v in col_map.items() if v == feat]
-            matched = False
-            for cand in rev_cands:
-                if cand in df_raw.columns:
-                    s = df_raw[cand].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-                    X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-                    matched = True
-                    break
-            if not matched:
-                raise ValueError(f"Consensus feature '{feat}' could not be resolved in Stage 2 dataset.")
-                
-    X_stage2 = pd.DataFrame(X_dict, index=df_raw.index)
+    def parse_num(col_name: str) -> pd.Series:
+        if col_name in df_raw.columns:
+            s = df_raw[col_name].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            return pd.to_numeric(s, errors="coerce")
+        return pd.Series(np.nan, index=df_raw.index)
+
+    X_stage2 = pd.DataFrame(index=df_raw.index)
+    
+    # Baseline & longitudinal DD
+    dd0 = parse_num("上机前DD").clip(lower=0)
+    c_dd_late = "上机第七天DD" if "上机第七天DD" in df_raw.columns else ("下机当天DD" if "下机当天DD" in df_raw.columns else "DD.2")
+    dd_late = parse_num(c_dd_late).clip(lower=0)
+    dd2 = parse_num("上机第二天DD").clip(lower=0)
+    dd_late = dd_late.fillna(dd2)
+    
+    # Fibrinogen
+    fib0 = parse_num("FIB").clip(lower=0.1)
+    fib2 = parse_num("FIB.1").clip(lower=0.1)
+    
+    # Antithrombin III
+    at2 = parse_num("AT3.1").clip(lower=0)
+    if at2.isna().all() and "AT3" in df_raw.columns:
+        at2 = parse_num("AT3").clip(lower=0)
+        
+    X_stage2["AT3_D2"] = at2
+    X_stage2["DD_D0"] = np.log1p(dd0)
+    X_stage2["Delta_DD_Late"] = dd_late - dd0
+    X_stage2["Delta_FIB"] = fib2 - fib0
+    X_stage2["FIB_D2"] = fib2
+    
+    X_stage2 = X_stage2[CONSENSUS_FEATURES]
     
     # Audit missing values before imputation
     missing_counts = X_stage2.isna().sum()

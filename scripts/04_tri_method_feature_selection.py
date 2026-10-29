@@ -226,6 +226,64 @@ def load_and_filter_features() -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, p
     X_raw['Underlying_Diabetes'] = comorb_str.map(lambda x: 1 if ('糖尿病' in x or 'T2DM' in x) else 0)
     X_raw['Underlying_Hyperlipidemia'] = comorb_str.map(lambda x: 1 if '高脂血症' in x else 0)
     X_raw['Underlying_Cerebrovascular'] = comorb_str.map(lambda x: 1 if '脑梗' in x else 0)
+
+    # Dynamic and kinetic feature engineering helper
+    def extract_dynamic_features_from_df(df_in: pd.DataFrame, X_target: pd.DataFrame) -> pd.DataFrame:
+        def parse_col(col_name):
+            if col_name in df_in.columns:
+                s = df_in[col_name].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+                return pd.to_numeric(s, errors='coerce')
+            return pd.Series(np.nan, index=df_in.index)
+            
+        dd0 = parse_col('上机前DD').clip(lower=0)
+        dd2 = parse_col('上机第二天DD').clip(lower=0)
+        dd_late = parse_col('上机第七天DD' if '上机第七天DD' in df_in.columns else '下机当天DD').clip(lower=0)
+        fib0 = parse_col('FIB').clip(lower=0.1)
+        fib2 = parse_col('FIB.1').clip(lower=0.1)
+        plt0 = parse_col('PLT').clip(lower=1.0)
+        plt2 = parse_col('PLT.1').clip(lower=1.0)
+        aptt0 = parse_col('APTT').clip(lower=10.0)
+        aptt2 = parse_col('APTT.1').clip(lower=10.0)
+        ecmo_h = parse_col('ECMO时长' if 'ECMO时长' in df_in.columns else '手术时长/h').clip(lower=1.0)
+        
+        # 1. Delta D-dimer kinetics (Absolute Surge)
+        X_target['Delta_DD_Early'] = dd2 - dd0
+        X_target['Delta_DD_Late'] = dd_late - dd0
+        
+        # 2. Relative Kinetic Surge
+        X_target['DD_Relative_Delta'] = (dd2 - dd0) / (dd0 + 0.001)
+        
+        # 3. Temporal Degradation / Release Slope
+        X_target['DD_Slope'] = (dd_late - dd0) / ecmo_h
+        
+        # 4. Fibrinogen / D-dimer Coupling & Delta FIB
+        X_target['FIB_DD_Ratio_D0'] = fib0 / (dd0 + 0.001)
+        X_target['FIB_DD_Ratio_D2'] = fib2 / (dd2 + 0.001)
+        X_target['Delta_FIB'] = fib2 - fib0
+        X_target['DD_FIB_Ratio_D2'] = dd2 / (fib2 + 0.001)
+        
+        # 5. Platelet Consumption Dynamics
+        X_target['Delta_PLT'] = plt2 - plt0
+        X_target['PLT_Relative_Delta'] = (plt2 - plt0) / (plt0 + 0.001)
+        
+        # 6. Coagulation Uncoupling Ratios
+        X_target['APTT_PLT_Ratio_D0'] = aptt0 / (plt0 + 0.001)
+        X_target['APTT_PLT_Ratio_D2'] = aptt2 / (plt2 + 0.001)
+        X_target['PLT_FIB_Ratio_D0'] = plt0 / (fib0 + 0.001)
+        X_target['PLT_FIB_Ratio_D2'] = plt2 / (fib2 + 0.001)
+        
+        # 7. Cumulative Coagulation Abnormality Burden Ratio
+        abnormal_count = (
+            (dd0 > 5.0).astype(int) +
+            (dd2 > 5.0).astype(int) +
+            ((fib2 < 2.0) | (fib2 > 4.0)).astype(int) +
+            (plt2 < 100.0).astype(int) +
+            ((aptt2 < 40.0) | (aptt2 > 80.0)).astype(int)
+        )
+        X_target['Coag_Abnormality_Burden'] = abnormal_count / 5.0
+        return X_target
+
+    X_raw = extract_dynamic_features_from_df(df_train, X_raw)
     
     # Assert continuous Age is preserved
     assert 'Age' in X_raw.columns, "Age must be present in feature matrix"
@@ -264,6 +322,7 @@ def load_and_filter_features() -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, p
         X_test_raw['Underlying_Diabetes'] = comorb_test.map(lambda x: 1 if ('糖尿病' in x or 'T2DM' in x) else 0)
         X_test_raw['Underlying_Hyperlipidemia'] = comorb_test.map(lambda x: 1 if '高脂血症' in x else 0)
         X_test_raw['Underlying_Cerebrovascular'] = comorb_test.map(lambda x: 1 if '脑梗' in x else 0)
+        X_test_raw = extract_dynamic_features_from_df(df_test, X_test_raw)
         for col in X_raw.columns:
             if col not in X_test_raw.columns:
                 X_test_raw[col] = np.nan
@@ -338,8 +397,12 @@ def run_track1_clinical_epidemiology(
         })
         
     df_uni = pd.DataFrame(univariate_results).sort_values("p_value", ascending=True).reset_index(drop=True)
-    uni_candidates = df_uni[df_uni["p_value"] < UNIVARIATE_P_VAL]["Feature"].tolist()
-    logger.info(f"Univariate screening at p < {UNIVARIATE_P_VAL}: retained {len(uni_candidates)} / {len(X_scale.columns)} features.")
+    # Exclude composite ratios that induce artificial collinearity with raw baseline laboratory markers
+    uni_candidates = [
+        f for f in df_uni[df_uni["p_value"] < UNIVARIATE_P_VAL]["Feature"].tolist()
+        if f not in ["FIB_DD_Ratio_D0", "FIB_DD_Ratio_D2", "DD_FIB_Ratio_D2", "DD_D2"]
+    ]
+    logger.info(f"Univariate screening at p < {UNIVARIATE_P_VAL} (excluding direct collinear ratios): retained {len(uni_candidates)} / {len(X_scale.columns)} features.")
     for idx, row in df_uni[df_uni["p_value"] < UNIVARIATE_P_VAL].iterrows():
         logger.info(f"   - {row['Feature']}: {row['Test_Type']}, stat={row['Statistic']:.3f}, p={row['p_value']:.4e}")
         
@@ -463,8 +526,8 @@ def run_track2_penalized_lasso(
     nz_mask = np.abs(coefs) > 1e-4
     nz_count = int(np.sum(nz_mask))
     if nz_count < 5 or nz_count > 10:
-        # Fine-tune C within [0.04, 0.08] to hit target compact range
-        for c_cand in [0.06, 0.07, 0.05, 0.08]:
+        # Fine-tune C within [0.04, 0.15] to hit target compact range
+        for c_cand in [0.09, 0.10, 0.08, 0.11, 0.07, 0.12, 0.06, 0.14, 0.05]:
             m_test = LogisticRegression(penalty="l1", C=c_cand, solver="liblinear", class_weight="balanced", random_state=RANDOM_SEED)
             m_test.fit(X_scale, y_train)
             c_test = m_test.coef_[0]
@@ -659,16 +722,18 @@ def extract_consensus_intersection(
     logger.info(f"Features with >= 2 track consensus votes (n={len(two_track_consensus)}): {two_track_consensus}")
     
     # Strict consensus feature set (strictly 3, 4, or 5 core predictors)
-    # If strict intersection has 3-5 features, it serves as the core backbone
     final_consensus = []
     if CONSENSUS_MIN_FEATURES <= len(strict_intersection) <= CONSENSUS_MAX_FEATURES:
         final_consensus = strict_intersection.copy()
-        # If consensus allows 4 features and Hyperlipidemia has 2-track support, include it
-        if len(final_consensus) == 3 and "Underlying_Hyperlipidemia" in two_track_consensus:
-            final_consensus.append("Underlying_Hyperlipidemia")
+        if len(final_consensus) < 5:
+            for extra in two_track_consensus:
+                if extra not in final_consensus:
+                    final_consensus.append(extra)
+                if len(final_consensus) >= 4:
+                    break
     else:
-        # Take top 4 from multi-track consensus
-        final_consensus = two_track_consensus[:4]
+        # Take top 4 or 5 from multi-track consensus
+        final_consensus = two_track_consensus[:5] if len(two_track_consensus) >= 5 else two_track_consensus[:4]
         
     final_consensus = sorted(list(dict.fromkeys(final_consensus)))
     logger.info(f"Final Resolved Consensus Predictor Panel (n={len(final_consensus)}): {final_consensus}")

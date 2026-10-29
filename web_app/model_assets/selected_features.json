@@ -1,20 +1,138 @@
 {
-    "consensus_features": [
+    "track1_logistic_features": [
         "DD_D0",
+        "Delta_FIB",
+        "DD_Relative_Delta",
+        "FIB_D2",
+        "AT3_D2",
+        "Delta_DD_Late",
+        "Underlying_Hyperlipidemia"
+    ],
+    "track2_lasso_features": [
+        "DD_D0",
+        "Delta_FIB",
+        "FIB_D2",
+        "ALT_D2",
+        "Underlying_Hyperlipidemia",
+        "PLT_FIB_Ratio_D2",
+        "Delta_DD_Late",
+        "AT3_D2"
+    ],
+    "track3_boruta_features": [
+        "DD_D0",
+        "DD_D2",
+        "WBC_D2",
         "FIB_D0",
         "FIB_D2",
-        "Underlying_Hyperlipidemia"
+        "APTT_D0",
+        "Delta_DD_Early",
+        "Delta_DD_Late",
+        "DD_Relative_Delta",
+        "DD_Slope",
+        "FIB_DD_Ratio_D0",
+        "FIB_DD_Ratio_D2",
+        "Delta_FIB",
+        "DD_FIB_Ratio_D2",
+        "PLT_FIB_Ratio_D2",
+        "Coag_Abnormality_Burden",
+        "AT3_D0",
+        "AT3_D2",
+        "APTT_PLT_Ratio_D0"
+    ],
+    "consensus_features": [
+        "AT3_D2",
+        "DD_D0",
+        "Delta_DD_Late",
+        "Delta_FIB",
+        "FIB_D2"
     ],
     "final_features": [
+        "AT3_D2",
         "DD_D0",
-        "FIB_D0",
-        "FIB_D2",
-        "Underlying_Hyperlipidemia"
+        "Delta_DD_Late",
+        "Delta_FIB",
+        "FIB_D2"
     ],
     "strict_intersection": [
+        "AT3_D2",
         "DD_D0",
+        "Delta_DD_Late",
+        "Delta_FIB",
+        "FIB_D2"
+    ],
+    "statistical_features": [
+        "DD_D0",
+        "Delta_FIB",
+        "DD_Relative_Delta",
+        "FIB_D2",
+        "AT3_D2",
+        "Delta_DD_Late",
+        "Underlying_Hyperlipidemia"
+    ],
+    "lasso_features": [
+        "DD_D0",
+        "Delta_FIB",
+        "FIB_D2",
+        "ALT_D2",
+        "Underlying_Hyperlipidemia",
+        "PLT_FIB_Ratio_D2",
+        "Delta_DD_Late",
+        "AT3_D2"
+    ],
+    "boruta_features": [
+        "DD_D0",
+        "DD_D2",
+        "WBC_D2",
         "FIB_D0",
         "FIB_D2",
-        "Underlying_Hyperlipidemia"
-    ]
+        "APTT_D0",
+        "Delta_DD_Early",
+        "Delta_DD_Late",
+        "DD_Relative_Delta",
+        "DD_Slope",
+        "FIB_DD_Ratio_D0",
+        "FIB_DD_Ratio_D2",
+        "Delta_FIB",
+        "DD_FIB_Ratio_D2",
+        "PLT_FIB_Ratio_D2",
+        "Coag_Abnormality_Burden",
+        "AT3_D0",
+        "AT3_D2",
+        "APTT_PLT_Ratio_D0"
+    ],
+    "clinical_backbone_features": [
+        "DD_D0",
+        "WBC_D0",
+        "FIB_D0",
+        "AT3_D0",
+        "APTT_D0",
+        "PT_D0",
+        "INR_D0",
+        "DD_D2",
+        "WBC_D2",
+        "FIB_D2",
+        "AT3_D2",
+        "APTT_D2",
+        "PT_D2",
+        "INR_D2",
+        "ALT_D0",
+        "AST_D0",
+        "Creatinine_D0",
+        "ALT_D2",
+        "AST_D2",
+        "Creatinine_D2"
+    ],
+    "consensus_metadata": {
+        "predictor_count": 5,
+        "random_seed": 42,
+        "cv_folds": 10,
+        "univariate_p_threshold": 0.1,
+        "vif_threshold": 10.0,
+        "multivariable_p_threshold": 0.08,
+        "boruta_alpha": 0.05,
+        "pump_speed_excluded": true,
+        "chd_excluded": true,
+        "cardiogenic_shock_excluded": true,
+        "age_continuous": true
+    }
 }

@@ -329,112 +329,104 @@ for p in FIGURES_DIRS:
         break
 
 # ==============================================================================
-# 4. CLINICAL PARAMETERS DICTIONARY (Consensus 5 Predictors)
+# 4. CLINICAL PARAMETERS DICTIONARY (Consensus 5 Dynamic & Kinetic Predictors)
 # ==============================================================================
 PRIMARY_CLINICAL_PARAMS = {
-    "DD_Late": {
-        "name": "ECMO后期/拔管前 D-二聚体 (Late D-Dimer)",
-        "short_name": "Late D-Dimer",
-        "unit": "mg/L",
-        "normal_range": "0.00 - 0.50 mg/L (危重症ICU稳定期 2.0 - 8.0)",
-        "min": 0.1, "max": 120.0, "default": 8.6, "step": 0.1,
-        "high_risk_val": 25.1, "low_risk_val": 4.2,
-        "desc": "核心主导预测因子 (Boruta Z=9.85, LASSO Coef=+0.842)。反映持续性套管周围微血栓及继发性纤溶亢进。"
+    "AT3_D2": {
+        "name": "ECMO第2天 抗凝血酶III (Day 2 Antithrombin III, AT-III)",
+        "short_name": "Day 2 AT-III",
+        "unit": "%",
+        "normal_range": "80.0 - 120.0 %",
+        "min": 10.0, "max": 150.0, "default": 72.0, "step": 1.0,
+        "high_risk_val": 48.0, "low_risk_val": 95.0,
+        "desc": "核心生理抗凝因子活性。体外膜肺异物回路消耗引发AT-III急性耗竭（血栓组降至48%），导致肝素耐药与静脉原位血栓暴发。"
     },
     "DD_D0": {
-        "name": "ECMO上机前 D-二聚体 (Baseline D-Dimer)",
+        "name": "ECMO上机前基线 D-二聚体 (Baseline D-Dimer)",
         "short_name": "Baseline D-Dimer",
         "unit": "mg/L",
-        "normal_range": "0.00 - 0.50 mg/L (危重症基线参考 1.0 - 5.0)",
-        "min": 0.1, "max": 100.0, "default": 5.4, "step": 0.1,
-        "high_risk_val": 15.6, "low_risk_val": 3.0,
-        "desc": "基线凝血与纤溶预激活状态，反映插管前已存在的血管内皮损伤与高凝底色 (OR=2.15, P=0.0001)。"
+        "normal_range": "0.00 - 0.50 mg/L (危重症基线 1.0 - 5.0)",
+        "min": 0.1, "max": 100.0, "default": 3.5, "step": 0.1,
+        "high_risk_val": 16.5, "low_risk_val": 2.1,
+        "desc": "基线凝血与高纤溶预激活标志，反映ECMO生命支持启动前已存在的休克缺血、内皮损伤与促凝倾向 (OR=3.43, P<0.0001)。"
     },
-    "WBC_D0": {
-        "name": "基线白细胞计数 (Baseline WBC Count)",
-        "short_name": "Baseline WBC",
-        "unit": "×10⁹/L",
-        "normal_range": "4.00 - 10.00 ×10⁹/L",
-        "min": 1.0, "max": 60.0, "default": 11.2, "step": 0.1,
-        "high_risk_val": 16.8, "low_risk_val": 8.5,
-        "desc": "全身过度炎症反应与中性粒细胞胞外网 (NETs) 释放，介导免疫血栓形成 (Immunothrombosis, OR=1.82)。"
+    "Delta_DD_Late": {
+        "name": "D-二聚体峰值演化绝对激增量 (Longitudinal Delta D-Dimer, ΔDD)",
+        "short_name": "Peak Delta D-Dimer",
+        "unit": "mg/L",
+        "normal_range": "< 1.00 mg/L",
+        "min": -20.0, "max": 80.0, "default": 1.5, "step": 0.5,
+        "high_risk_val": 12.8, "low_risk_val": 0.2,
+        "desc": "核心动态特征：DD_Late - DD_D0。体外回路持续接触激活导致活动性微血栓形成与继发性高纤溶暴发。血栓组平均激增达+10.80 mg/L。"
+    },
+    "Delta_FIB": {
+        "name": "48小时纤维蛋白原动态绝对差值 (48h Delta Fibrinogen, ΔFIB)",
+        "short_name": "48h Delta FIB",
+        "unit": "g/L",
+        "normal_range": "-0.50 - +0.50 g/L",
+        "min": -5.0, "max": 8.0, "default": 0.4, "step": 0.1,
+        "high_risk_val": 2.2, "low_risk_val": -0.3,
+        "desc": "核心动态特征：FIB_D2 - FIB_D0。急性期反应与回路刺激诱导纤维蛋白原合成爆发，提供血栓致密网架核心底物 (OR=4.10, P=0.0001)。"
     },
     "FIB_D2": {
         "name": "ECMO第2天 纤维蛋白原 (Day 2 Fibrinogen)",
         "short_name": "Day 2 Fibrinogen",
         "unit": "g/L",
         "normal_range": "2.00 - 4.00 g/L",
-        "min": 0.5, "max": 12.0, "default": 3.1, "step": 0.1,
-        "high_risk_val": 4.6, "low_risk_val": 2.4,
-        "desc": "早期凝血底物丰富度与急性期反应蛋白周转速度，高水平促进血栓纤维网稳固 (OR=1.68, P=0.0084)。"
-    },
-    "ALT_D7": {
-        "name": "ECMO第7天 谷丙转氨酶 (Day 7 ALT)",
-        "short_name": "Day 7 ALT",
-        "unit": "U/L",
-        "normal_range": "9.0 - 50.0 U/L",
-        "min": 5.0, "max": 500.0, "default": 32.0, "step": 1.0,
-        "high_risk_val": 24.5, "low_risk_val": 48.0,
-        "desc": "第7天肝功能代谢与清除能力。血栓组ALT相对偏低，提示肝淤血好转或抗凝因子合成动力学改变 (OR=0.62)。"
+        "min": 0.5, "max": 12.0, "default": 3.2, "step": 0.1,
+        "high_risk_val": 5.2, "low_risk_val": 2.3,
+        "desc": "早期稳态凝血网架底物丰富度。高浓度纤维蛋白原显著增强深静脉血栓凝块的机械抗剪切阻力与稳固性 (OR=1.99, P=0.0087)。"
     }
 }
 
 ALGO_MAP = {
-    "LGBM": {
-        "name": "LightGBM (推荐金标准 SOTA 算法)",
-        "tag": "🏆 最佳临床金标准",
-        "desc": "通过 10折CV 与 盲态外部验证综合评选第一。具有卓越的非线性边界与临床决策净获益。",
-        "cv_auc": "0.881 (0.842 - 0.920)",
-        "ext_auc": "0.829 (0.735 - 0.923)",
-        "sens": "80.0%", "spec": "79.0%", "brier": "0.129"
-    },
-    "XGB": {
-        "name": "XGBoost (极端梯度提升树)",
-        "tag": "⚡ 梯度提升算法",
-        "desc": "二阶泰勒展开梯度提升树，抗过拟合正则化强。",
-        "cv_auc": "0.886 (0.864 - 0.908)",
-        "ext_auc": "0.793 (0.691 - 0.894)",
-        "sens": "77.8%", "spec": "83.0%", "brier": "0.124"
-    },
     "RF": {
-        "name": "Random Forest (随机森林)",
-        "tag": "🌲 经典集成算法",
-        "desc": "多棵去相关决策树装袋集成，泛化性极佳。",
-        "cv_auc": "0.888 (0.869 - 0.908)",
-        "ext_auc": "0.802 (0.702 - 0.901)",
-        "sens": "80.6%", "spec": "83.5%", "brier": "0.118"
+        "name": "Random Forest (推荐金标准 随机森林)",
+        "tag": "🏆 推荐临床金标准",
+        "desc": "10折CV AUROC 0.884，独立外部测试集 AUROC 0.809。装袋集成抗过拟合，泛化能力优异。",
+        "cv_auc": "0.884 (0.817 - 0.950)",
+        "ext_auc": "0.809 (0.702 - 0.901)",
+        "sens": "86.1%", "spec": "81.3%", "brier": "0.118"
     },
     "LR": {
-        "name": "Logistic Regression (逻辑回归)",
-        "tag": "📈 经典统计学模型",
-        "desc": "临床经典可解释广义线性模型，对数几率比透明。",
-        "cv_auc": "0.807 (0.779 - 0.835)",
-        "ext_auc": "0.827 (0.735 - 0.918)",
-        "sens": "80.0%", "spec": "72.8%", "brier": "0.158"
+        "name": "Logistic Regression (经典逻辑回归)",
+        "tag": "📈 高度可解释模型",
+        "desc": "临床经典可解释广义线性模型，10折CV AUROC 0.850，外部验证 AUROC 0.809，几率比直观透明。",
+        "cv_auc": "0.850 (0.788 - 0.912)",
+        "ext_auc": "0.809 (0.686 - 0.873)",
+        "sens": "91.7%", "spec": "76.1%", "brier": "0.125"
     },
     "SVM": {
         "name": "Support Vector Machine (支持向量机)",
         "tag": "🔬 径向基核函数",
-        "desc": "RBF核高维空间最大间隔超平面分割。",
-        "cv_auc": "0.824 (0.799 - 0.849)",
-        "ext_auc": "0.781 (0.678 - 0.884)",
-        "sens": "72.2%", "spec": "82.6%", "brier": "0.142"
+        "desc": "RBF高维最大间隔超平面，10折CV AUROC 0.865，外部验证 AUROC 0.798。",
+        "cv_auc": "0.865 (0.797 - 0.932)",
+        "ext_auc": "0.798 (0.662 - 0.878)",
+        "sens": "86.1%", "spec": "81.3%", "brier": "0.132"
+    },
+    "XGB": {
+        "name": "XGBoost (极端梯度提升树)",
+        "tag": "⚡ 梯度提升算法",
+        "desc": "二阶泰勒展开梯度提升树，10折CV AUROC 0.854，外部验证 AUROC 0.764。",
+        "cv_auc": "0.854 (0.774 - 0.935)",
+        "ext_auc": "0.764 (0.642 - 0.856)",
+        "sens": "72.2%", "spec": "90.4%", "brier": "0.120"
+    },
+    "NB": {
+        "name": "Gaussian Naive Bayes (高斯朴素贝叶斯)",
+        "tag": "📊 概率生成模型",
+        "desc": "高斯先验独立概率推断，10折CV AUROC 0.846，外部验证 AUROC 0.821。",
+        "cv_auc": "0.846 (0.782 - 0.910)",
+        "ext_auc": "0.821 (0.734 - 0.908)",
+        "sens": "83.3%", "spec": "78.3%", "brier": "0.140"
     },
     "DT": {
         "name": "Decision Tree (临床决策树)",
         "tag": "🌳 单树规则模型",
-        "desc": "单树划分规则，直观树状临床分流路径。",
-        "cv_auc": "0.792 (0.759 - 0.824)",
-        "ext_auc": "0.735 (0.621 - 0.849)",
-        "sens": "75.0%", "spec": "78.7%", "brier": "0.165"
-    },
-    "NB": {
-        "name": "Gaussian Naive Bayes (朴素贝叶斯)",
-        "tag": "📊 概率生成模型",
-        "desc": "高斯先验独立概率图推断。",
-        "cv_auc": "0.841 (0.811 - 0.871)",
-        "ext_auc": "0.774 (0.665 - 0.883)",
-        "sens": "69.4%", "spec": "81.7%", "brier": "0.151"
+        "desc": "单树划分规则，直观树状临床分流路径，10折CV AUROC 0.839。",
+        "cv_auc": "0.839 (0.760 - 0.919)",
+        "ext_auc": "0.718 (0.562 - 0.798)",
+        "sens": "86.1%", "spec": "81.7%", "brier": "0.155"
     }
 }
 
@@ -444,7 +436,16 @@ ALGO_MAP = {
 @st.cache_resource(show_spinner=False)
 def load_production_pipeline():
     """Load preprocessors, imputer, scaler, and background data."""
-    req_features = ["DD_D0", "DD_Late", "WBC_D0", "ALT_D7", "FIB_D2"]
+    sel_json_path = MODEL_ASSETS_DIR / "selected_features.json"
+    req_features = ["AT3_D2", "DD_D0", "Delta_DD_Late", "Delta_FIB", "FIB_D2"]
+    if sel_json_path.exists():
+        try:
+            with open(sel_json_path, "r", encoding="utf-8") as f:
+                sel_data = json.load(f)
+                req_features = sel_data.get("consensus_features") or sel_data.get("final_features") or req_features
+        except Exception:
+            pass
+
     scaler = None
     imputer = None
     bg_df = None
@@ -474,9 +475,9 @@ def load_production_pipeline():
 
     if bg_df is None:
         bg_df = pd.DataFrame([
-            [5.4, 8.6, 11.2, 32.0, 3.1],
-            [15.6, 25.1, 16.8, 24.5, 4.6],
-            [3.1, 4.5, 8.4, 38.0, 2.8]
+            [72.0, np.log1p(3.5), 1.5, 0.4, 3.2],
+            [48.0, np.log1p(16.5), 12.8, 2.2, 5.2],
+            [95.0, np.log1p(2.1), 0.2, -0.3, 2.3]
         ], columns=req_features)
 
     return req_features, scaler, imputer, bg_df
@@ -503,8 +504,11 @@ REQUIRED_FEATURES, GLOBAL_SCALER, GLOBAL_IMPUTER, GLOBAL_BG_DF = load_production
 # 6. INFERENCE & SHAP CALCULATION ENGINES
 # ==============================================================================
 def predict_patient_risk(model, raw_dict, features, scaler=None, imputer=None):
-    """Compute risk probability for a single patient dictionary with robust NaN handling."""
-    df_raw = pd.DataFrame([raw_dict])[features]
+    """Compute risk probability for a single patient dictionary with robust log-transform and NaN handling."""
+    df_raw = pd.DataFrame([raw_dict])[features].copy()
+    if "DD_D0" in df_raw.columns:
+        df_raw["DD_D0"] = np.log1p(np.maximum(0.0, df_raw["DD_D0"].astype(float)))
+        
     if imputer is not None:
         try:
             df_raw = pd.DataFrame(imputer.transform(df_raw), columns=features)
@@ -532,7 +536,9 @@ def predict_patient_risk(model, raw_dict, features, scaler=None, imputer=None):
 
 def compute_local_shap(model, raw_dict, features, scaler, bg_df, algo_key):
     """Calculate authentic SHAP attributions for the current patient."""
-    df_raw = pd.DataFrame([raw_dict])[features]
+    df_raw = pd.DataFrame([raw_dict])[features].copy()
+    if "DD_D0" in df_raw.columns:
+        df_raw["DD_D0"] = np.log1p(np.maximum(0.0, df_raw["DD_D0"].astype(float)))
     
     # Extract base estimator and preprocessor if encapsulated in Pipeline
     preprocessor = scaler

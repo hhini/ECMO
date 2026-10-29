@@ -82,12 +82,13 @@ plt.rcParams["figure.dpi"] = 300
 plt.rcParams["savefig.dpi"] = 300
 
 TARGET_COLUMN = "是否下肢血栓"
-CONSENSUS_FEATURES = ["DD_D0", "FIB_D0", "FIB_D2", "Underlying_Hyperlipidemia"]
+CONSENSUS_FEATURES = ["AT3_D2", "DD_D0", "Delta_DD_Late", "Delta_FIB", "FIB_D2"]
 FEATURE_DISPLAY_NAMES = {
+    "AT3_D2": "Day 2 Antithrombin III (%)",
     "DD_D0": "Baseline D-Dimer ln(mg/L)",
-    "FIB_D0": "Baseline Fibrinogen (g/L)",
+    "Delta_DD_Late": "Longitudinal Delta D-Dimer ΔDD (mg/L)",
+    "Delta_FIB": "48h Fibrinogen Delta ΔFIB (g/L)",
     "FIB_D2": "Day 2 Fibrinogen (g/L)",
-    "Underlying_Hyperlipidemia": "Hyperlipidemia (1=Yes)",
 }
 
 # ==============================================================================
@@ -105,43 +106,37 @@ def load_cohort_data() -> Tuple[pd.DataFrame, pd.Series]:
         raise ValueError(f"Target column '{TARGET_COLUMN}' missing from dataset.")
     y = df_raw[TARGET_COLUMN].astype(int)
     
-    X_dict = {}
-    for feat in CONSENSUS_FEATURES:
-        if feat == "DD_D0":
-            src = "上机前DD" if "上机前DD" in df_raw.columns else "DD_D0"
-            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-            X_dict[feat] = np.log1p(pd.to_numeric(s, errors="coerce").clip(lower=0)).values
-        elif feat == "FIB_D0":
-            src = "FIB" if "FIB" in df_raw.columns else "FIB_D0"
-            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        elif feat == "FIB_D2":
-            src = "FIB.1" if "FIB.1" in df_raw.columns else "FIB_D2"
-            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        elif feat == "Underlying_Hyperlipidemia":
-            if "Underlying_Hyperlipidemia" in df_raw.columns:
-                X_dict[feat] = pd.to_numeric(df_raw["Underlying_Hyperlipidemia"], errors="coerce").fillna(0).values
-            else:
-                comorb = df_raw["基础疾病"].fillna("无").astype(str)
-                X_dict[feat] = comorb.map(lambda x: 1 if "高脂血症" in x else 0).values
-        elif feat in df_raw.columns:
-            s = df_raw[feat].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-        else:
-            col_map = {"APTT": "APTT_D0", "PLT.1": "PLT_D2", "WBC": "WBC_D0", "FIB.1": "FIB_D2"}
-            rev_cands = [k for k, v in col_map.items() if v == feat]
-            matched = False
-            for cand in rev_cands:
-                if cand in df_raw.columns:
-                    s = df_raw[cand].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
-                    X_dict[feat] = pd.to_numeric(s, errors="coerce").values
-                    matched = True
-                    break
-            if not matched:
-                raise ValueError(f"Could not map feature '{feat}' from dataset columns.")
-                
-    X = pd.DataFrame(X_dict, index=df_raw.index)
+    def parse_num(col_name: str) -> pd.Series:
+        if col_name in df_raw.columns:
+            s = df_raw[col_name].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            return pd.to_numeric(s, errors="coerce")
+        return pd.Series(np.nan, index=df_raw.index)
+
+    X = pd.DataFrame(index=df_raw.index)
+    
+    # Baseline & longitudinal DD
+    dd0 = parse_num("上机前DD").clip(lower=0)
+    c_dd_late = "上机第七天DD" if "上机第七天DD" in df_raw.columns else ("下机当天DD" if "下机当天DD" in df_raw.columns else "DD.2")
+    dd_late = parse_num(c_dd_late).clip(lower=0)
+    dd2 = parse_num("上机第二天DD").clip(lower=0)
+    dd_late = dd_late.fillna(dd2)
+    
+    # Fibrinogen
+    fib0 = parse_num("FIB").clip(lower=0.1)
+    fib2 = parse_num("FIB.1").clip(lower=0.1)
+    
+    # Antithrombin III
+    at2 = parse_num("AT3.1").clip(lower=0)
+    if at2.isna().all() and "AT3" in df_raw.columns:
+        at2 = parse_num("AT3").clip(lower=0)
+        
+    X["AT3_D2"] = at2
+    X["DD_D0"] = np.log1p(dd0)
+    X["Delta_DD_Late"] = dd_late - dd0
+    X["Delta_FIB"] = fib2 - fib0
+    X["FIB_D2"] = fib2
+    
+    X = X[CONSENSUS_FEATURES]
     medians = X.median()
     X = X.fillna(medians)
     
