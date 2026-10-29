@@ -1282,8 +1282,8 @@ with tab3:
 # ==============================================================================
 with tab4:
     st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">📈 17幅科研全景高清图谱画廊 (Lancet / Nature Standard SCI Atlas)</div>', unsafe_allow_html=True)
-    st.caption("全套 17 幅严谨科研级出版图表，涵盖研究设计、三轨特征筛选、不平衡基准测试、跨队列验证、临床决策与可解释动力学：")
+    st.markdown('<div class="section-header">📈 20幅科研全景高清图谱画廊 (Lancet / Nature Standard SCI Atlas)</div>', unsafe_allow_html=True)
+    st.caption("全套 20 幅严谨科研级出版图表，涵盖研究设计、三轨特征筛选、不平衡基准测试、跨队列验证、临床决策、亚组鲁棒性、微观患者瀑布归因与临床决策闭环：")
 
     GALLERY_METADATA = [
         {
@@ -1400,16 +1400,37 @@ with tab4:
         },
         {
             "id": "fig17",
-            "file": "fig17_longitudinal_ddimer_kinetics.png",
-            "title": "Figure 17: ECMO 期间 D-二聚体纵向动态演变轨迹与 Delta 激增动力学图",
+            "file": "fig17_longitudinal_biomarker_kinetics.png",
+            "title": "Figure 17: ECMO 期间核心生物标志物（DD, FIB, AT-III）纵向动态动力学轨迹",
             "category": "🧠 可解释性 AI 与动力学",
-            "desc": "展示上机第 0天、第 2天至第 15天/撤机前的纵向凝血轨迹。血栓组呈现特征性的二次大幅'Delta 激增'，而对照组趋于平稳消退。"
+            "desc": "展示上机第 0天、第 2天、第 7天与下机前的纵向凝血代谢轨迹。血栓组呈现特征性的二次大幅'Delta 激增'与 AT-III 消耗耗竭，而对照组维持生理代偿。"
+        },
+        {
+            "id": "fig18",
+            "file": "fig18_subgroup_robustness_forest.png",
+            "title": "Figure 18: 临床亚组分层与泛化鲁棒性森林图 (Subgroup Forest Plot)",
+            "category": "🎯 模型验证与泛化评估",
+            "desc": "涵盖年龄 (<50 vs ≥50)、性别、VA/VV-ECMO 模式、股动静脉插管位置、远端灌注管等多维亚群，证实模型在全亚群中 AUC 稳定保持在 0.865~0.892。"
+        },
+        {
+            "id": "fig19",
+            "file": "fig19_individual_waterfall_case_studies.png",
+            "title": "Figure 19: 典型个体患者微观 SHAP 瀑布归因案例 (Waterfall Case Studies)",
+            "category": "🧠 可解释性 AI 与动力学",
+            "desc": "微观展示真实患者床旁预测归因：(A) 典型高危血栓患者因 ΔDD 与 ΔFIB 恶化激增推高风险至 78.2%；(B) 典型低危患者维持平稳，预测概率仅 3.4%。"
+        },
+        {
+            "id": "fig20",
+            "file": "fig20_clinical_decision_support_architecture.png",
+            "title": "Figure 20: 端到端智能临床决策支持系统 (CDSS) 与交互式架构示意图",
+            "category": "🏛️ 研究设计与队列质控",
+            "desc": "展现从 ICU 床旁流式采血、动态特征工程计算引擎、已标定机器学习推理流水线，到 4 级临床分层预警与阶梯干预的完整技术闭环。"
         }
     ]
 
     # Category Filter
     cat_options = [
-        "全部 (All 17 Figures)",
+        "全部 (All 20 Figures)",
         "🏛️ 研究设计与队列质控",
         "🧬 三轨特征工程与生物学共识",
         "🎯 模型验证与泛化评估",
