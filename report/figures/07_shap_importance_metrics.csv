@@ -1,0 +1,5 @@
+Feature,Raw_Feature,Mean_Abs_SHAP
+Baseline D-Dimer ln(mg/L),DD_D0,0.27155264936331175
+Day 2 Fibrinogen (g/L),FIB_D2,0.1753871284374638
+Baseline Fibrinogen (g/L),FIB_D0,0.05664708965917646
+Hyperlipidemia (1=Yes),Underlying_Hyperlipidemia,0.0

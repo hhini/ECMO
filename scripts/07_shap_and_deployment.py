@@ -44,16 +44,19 @@ import shap
 # ==============================================================================
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
-STAGE1_DATA_PATH = DATA_DIR / "data2.csv"
+STAGE1_DATA_PATH = DATA_DIR / "data2_synthetic.csv"
+if not STAGE1_DATA_PATH.exists():
+    STAGE1_DATA_PATH = DATA_DIR / "data2.csv"
 
 DIR_M7_SHAP = PROJECT_ROOT / "output" / "07_shap_interpretability"
 DIR_M4_SHAP = PROJECT_ROOT / "output" / "04_shap_interpretability"
 OUTPUT_DIR = PROJECT_ROOT / "output"
 REPORT_FIG_DIR = PROJECT_ROOT / "report" / "figures"
+REPORT_SCI_FIG_DIR = PROJECT_ROOT / "report" / "sci_figures"
 REPORT_IMG_DIR = PROJECT_ROOT / "report" / "images"
 MODEL_ASSETS_DIR = PROJECT_ROOT / "web_app" / "model_assets"
 
-for d in [DIR_M7_SHAP, DIR_M4_SHAP, REPORT_FIG_DIR, REPORT_IMG_DIR, MODEL_ASSETS_DIR]:
+for d in [DIR_M7_SHAP, DIR_M4_SHAP, REPORT_FIG_DIR, REPORT_SCI_FIG_DIR, REPORT_IMG_DIR, MODEL_ASSETS_DIR]:
     d.mkdir(parents=True, exist_ok=True)
 
 # Setup Logging
@@ -79,12 +82,12 @@ plt.rcParams["figure.dpi"] = 300
 plt.rcParams["savefig.dpi"] = 300
 
 TARGET_COLUMN = "是否下肢血栓"
-CONSENSUS_FEATURES = ["APTT_D0", "PLT_D2", "WBC_D0", "FIB_D2"]
+CONSENSUS_FEATURES = ["DD_D0", "FIB_D0", "FIB_D2", "Underlying_Hyperlipidemia"]
 FEATURE_DISPLAY_NAMES = {
-    "APTT_D0": "Day 0 APTT (s)",
-    "PLT_D2": "Day 2 Platelets (×10⁹/L)",
-    "WBC_D0": "Day 0 WBC (×10⁹/L)",
+    "DD_D0": "Baseline D-Dimer ln(mg/L)",
+    "FIB_D0": "Baseline Fibrinogen (g/L)",
     "FIB_D2": "Day 2 Fibrinogen (g/L)",
+    "Underlying_Hyperlipidemia": "Hyperlipidemia (1=Yes)",
 }
 
 # ==============================================================================
@@ -102,22 +105,37 @@ def load_cohort_data() -> Tuple[pd.DataFrame, pd.Series]:
         raise ValueError(f"Target column '{TARGET_COLUMN}' missing from dataset.")
     y = df_raw[TARGET_COLUMN].astype(int)
     
-    col_map = {
-        "APTT": "APTT_D0",
-        "PLT.1": "PLT_D2",
-        "WBC": "WBC_D0",
-        "FIB.1": "FIB_D2",
-    }
-    
     X_dict = {}
     for feat in CONSENSUS_FEATURES:
-        if feat in df_raw.columns:
-            X_dict[feat] = df_raw[feat].values
+        if feat == "DD_D0":
+            src = "上机前DD" if "上机前DD" in df_raw.columns else "DD_D0"
+            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            X_dict[feat] = np.log1p(pd.to_numeric(s, errors="coerce").clip(lower=0)).values
+        elif feat == "FIB_D0":
+            src = "FIB" if "FIB" in df_raw.columns else "FIB_D0"
+            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
+        elif feat == "FIB_D2":
+            src = "FIB.1" if "FIB.1" in df_raw.columns else "FIB_D2"
+            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
+        elif feat == "Underlying_Hyperlipidemia":
+            if "Underlying_Hyperlipidemia" in df_raw.columns:
+                X_dict[feat] = pd.to_numeric(df_raw["Underlying_Hyperlipidemia"], errors="coerce").fillna(0).values
+            else:
+                comorb = df_raw["基础疾病"].fillna("无").astype(str)
+                X_dict[feat] = comorb.map(lambda x: 1 if "高脂血症" in x else 0).values
+        elif feat in df_raw.columns:
+            s = df_raw[feat].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
         else:
+            col_map = {"APTT": "APTT_D0", "PLT.1": "PLT_D2", "WBC": "WBC_D0", "FIB.1": "FIB_D2"}
+            rev_cands = [k for k, v in col_map.items() if v == feat]
             matched = False
-            for k, v in col_map.items():
-                if v == feat and k in df_raw.columns:
-                    X_dict[feat] = df_raw[k].values
+            for cand in rev_cands:
+                if cand in df_raw.columns:
+                    s = df_raw[cand].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+                    X_dict[feat] = pd.to_numeric(s, errors="coerce").values
                     matched = True
                     break
             if not matched:
@@ -317,7 +335,7 @@ def run_shap_analysis():
         "07_shap_importance_metrics.csv",
     ]
     
-    mirror_targets = [DIR_M4_SHAP, OUTPUT_DIR, REPORT_FIG_DIR, REPORT_IMG_DIR]
+    mirror_targets = [DIR_M4_SHAP, OUTPUT_DIR, REPORT_FIG_DIR, REPORT_SCI_FIG_DIR, REPORT_IMG_DIR]
     for target_dir in mirror_targets:
         target_dir.mkdir(parents=True, exist_ok=True)
         for art in artifacts_to_mirror:
@@ -325,6 +343,9 @@ def run_shap_analysis():
             if src.exists():
                 dst = target_dir / art
                 shutil.copyfile(src, dst)
+                
+    if (DIR_M7_SHAP / "04_shap_summary.png").exists():
+        shutil.copyfile(DIR_M7_SHAP / "04_shap_summary.png", REPORT_SCI_FIG_DIR / "fig15_shap_interpretability_panel.png")
                 
     logger.info("Successfully mirrored all SHAP figures and metrics to output/, output/04_shap_interpretability/, and report/figures/")
     logger.info("Milestone 7 SHAP Interpretability pipeline completed successfully!")

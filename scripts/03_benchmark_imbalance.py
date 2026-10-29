@@ -62,8 +62,16 @@ if hasattr(sys.stdout, "reconfigure"):
 PROJECT_ROOT = Path(r"D:\acode\ECMO").resolve()
 OUTPUT_DIR = PROJECT_ROOT / "output" / "03_imbalance_benchmark"
 TRAIN_DATA_PATH = PROJECT_ROOT / "output" / "01_preprocessing" / "train_preprocessed.csv"
+if not TRAIN_DATA_PATH.exists():
+    TRAIN_DATA_PATH = PROJECT_ROOT / "data" / "data2_calibrated.csv"
+if not TRAIN_DATA_PATH.exists():
+    TRAIN_DATA_PATH = PROJECT_ROOT / "data" / "data2.csv"
 TEST_DATA_PATH = PROJECT_ROOT / "output" / "01_preprocessing" / "test_preprocessed.csv"
-FEATURE_CONFIG_PATH = PROJECT_ROOT / "output" / "02_feature_selection" / "selected_features.json"
+if not TEST_DATA_PATH.exists():
+    TEST_DATA_PATH = PROJECT_ROOT / "output" / "01_stage2_clean" / "stage2_clean.csv"
+FEATURE_CONFIG_PATH = PROJECT_ROOT / "output" / "04_feature_selection" / "selected_features.json"
+if not FEATURE_CONFIG_PATH.exists():
+    FEATURE_CONFIG_PATH = PROJECT_ROOT / "output" / "02_feature_selection" / "selected_features.json"
 
 RANDOM_SEED = 30
 N_SPLITS = 10
@@ -188,6 +196,23 @@ def load_datasets() -> Tuple[pd.DataFrame, pd.Series, List[str]]:
         f"({pos_count/len(y_train)*100:.2f}%), Negative={neg_count} ({neg_count/len(y_train)*100:.2f}%)."
     )
 
+    # Harmonize Chinese column names if present
+    col_map = {
+        '年龄': 'Age', 'BMI': 'BMI', '上机前DD': 'DD_D0', '上机第二天DD': 'DD_D2',
+        'WBC': 'WBC_D0', 'WBC.1': 'WBC_D2', 'FIB': 'FIB_D0', 'FIB.1': 'FIB_D2',
+        'PLT': 'PLT_D0', 'PLT.1': 'PLT_D2', 'Hb': 'Hb_D0', 'Hb.1': 'Hb_D2',
+        'PT': 'PT_D0', 'PT.1': 'PT_D2', 'INR': 'INR_D0', 'INR.1': 'INR_D2',
+        'APTT': 'APTT_D0', 'APTT.1': 'APTT_D2', 'AT3': 'AT3_D0', 'AT3.1': 'AT3_D2',
+        '谷丙': 'ALT_D0', '谷丙.1': 'ALT_D2', '谷草': 'AST_D0', '谷草.1': 'AST_D2',
+        '肌酐': 'Creatinine_D0', '肌酐.1': 'Creatinine_D2', 'pH': 'pH_D0', 'pH.1': 'pH_D2',
+    }
+    for cn, en in col_map.items():
+        if cn in df_train.columns and en not in df_train.columns:
+            s = df_train[cn].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            df_train[en] = pd.to_numeric(s, errors='coerce')
+    if '基础疾病' in df_train.columns and 'Underlying_Hyperlipidemia' not in df_train.columns:
+        df_train['Underlying_Hyperlipidemia'] = df_train['基础疾病'].fillna('').astype(str).apply(lambda x: 1 if '高脂血症' in x else 0)
+
     # Determine consensus clinical features
     consensus_features = []
     if FEATURE_CONFIG_PATH.exists():
@@ -206,9 +231,13 @@ def load_datasets() -> Tuple[pd.DataFrame, pd.Series, List[str]]:
     if len(consensus_features) < 3:
         logger.info("Using standard core clinical consensus features...")
         default_candidates = [
-            "Creatinine_D2", "Underlying_Hyperlipidemia", "Age", "AST_D2", "pH_D2"
+            "DD_D0", "FIB_D2", "APTT_D0", "Underlying_Hyperlipidemia", "Age"
         ]
         consensus_features = [c for c in default_candidates if c in df_train.columns]
+
+    # Impute missing values with median
+    for c in consensus_features:
+        df_train[c] = pd.to_numeric(df_train[c], errors='coerce').fillna(df_train[c].median())
 
     logger.info(f"Active consensus feature set ({len(consensus_features)} features): {consensus_features}")
     return df_train, y_train, consensus_features

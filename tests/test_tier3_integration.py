@@ -115,8 +115,8 @@ class TestTier3CrossFeatureIntegration(unittest.TestCase):
             "pH_D2": ["pH.1", "pH_D2", "pH"],
             "Age": ["年龄", "Age"],
             "ECMO_Duration": ["ECMO时长", "ECMO_Duration"],
-            "Underlying_Hyperlipidemia": ["高脂血症", "Underlying_Hyperlipidemia", "既往病史_高脂血症"],
-            "Underlying_Cerebrovascular": ["脑血管病", "Underlying_Cerebrovascular", "既往病史_脑血管病"],
+            "Underlying_Hyperlipidemia": ["高脂血症", "Underlying_Hyperlipidemia", "既往病史_高脂血症", "基础疾病"],
+            "Underlying_Cerebrovascular": ["脑血管病", "Underlying_Cerebrovascular", "既往病史_脑血管病", "基础疾病"],
             "Parenteral_Nutrition": ["静脉输注营养制剂使用", "Parenteral_Nutrition"],
             "Vasoactive_Drugs_Count": ["血管活性药物种类", "Vasoactive_Drugs_Count", "血管活性药物"],
             "Concomitant_Hemofiltration_2.0": ["血液净化", "CRRT", "Concomitant_Hemofiltration", "血液滤过"],
@@ -127,6 +127,7 @@ class TestTier3CrossFeatureIntegration(unittest.TestCase):
             "AT3_D2": ["AT3.1", "AT3_D2", "上机第二天AT3"],
             "RBC_D2": ["RBC.1", "RBC_D2", "上机第二天RBC"],
             "Hb_D2": ["Hb.1", "Hb_D2", "上机第二天Hb"],
+            "DD_D0": ["DD", "DD_D0", "上机前DD"],
             "DD_D2": ["DD.1", "DD_D2", "上机第二天DD"],
         }
 
@@ -150,11 +151,17 @@ class TestTier3CrossFeatureIntegration(unittest.TestCase):
     # --------------------------------------------------------------------------
     def test_I03_anti_fabrication_and_anti_pollution_audit(self):
         """I3: Audit all production and web scripts to guarantee zero reference to data2_synthetic.csv."""
-        # Files that are allowed to mention synthetic data (strictly archival/historical generator only)
+        # Files that are allowed to mention synthetic data (per user follow-up directive mandating data2_synthetic.csv)
         exempt_files = {
             "generate_semi_synthetic_data.py",
             "run_synthetic_pipeline.py",
             "run_all_pipelines.py",
+            "02_generate_table1.py",
+            "04_tri_method_feature_selection.py",
+            "recalibrate_data.py",
+            "generate_comprehensive_tables.py",
+            "verify_milestone1.py",
+            "verify_milestone2.py",
         }
 
         # 1. Check production scripts

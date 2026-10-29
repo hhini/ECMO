@@ -1,9 +1,20 @@
 {
+    "consensus_features": [
+        "DD_D0",
+        "FIB_D0",
+        "FIB_D2",
+        "Underlying_Hyperlipidemia"
+    ],
     "final_features": [
         "DD_D0",
-        "DD_Late",
-        "WBC_D0",
-        "ALT_D7",
-        "FIB_D2"
+        "FIB_D0",
+        "FIB_D2",
+        "Underlying_Hyperlipidemia"
+    ],
+    "strict_intersection": [
+        "DD_D0",
+        "FIB_D0",
+        "FIB_D2",
+        "Underlying_Hyperlipidemia"
     ]
 }

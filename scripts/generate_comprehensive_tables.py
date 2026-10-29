@@ -4,9 +4,9 @@ Generate Comprehensive Table 1 and Table 2/2B Statistical Artifacts:
 - Table 1: Baseline Characteristics and Balance Diagnosis Between Training and Independent Test Cohorts
   Columns: [领域类别, 项目, 类别, 训练集 (n=266), 测试集 (n=106), Z值, χ²值, P值]
 - Table 2: Univariate Analysis Across Cohorts & Consistency Verification
-  Columns: [领域类别, 项目, 类别, 训练集 非血栓组 (n=230), 训练集 血栓组 (n=36), 训练集 Z/χ², 训练集 P值, 测试集 非血栓组 (n=81), 测试集 血栓组 (n=25), 测试集 Z/χ², 测试集 P值, 跨队列效应一致性说明]
+  Columns: [领域类别, 项目, 类别, 训练集 非血栓组 (n=221), 训练集 血栓组 (n=45), 训练集 Z/χ², 训练集 P值, 测试集 非血栓组 (n=81), 测试集 血栓组 (n=25), 测试集 Z/χ², 测试集 P值, 跨队列效应一致性说明]
 - Table 2B: Univariate Analysis in Overall Cohort (N=372)
-  Columns: [领域类别, 项目, 类别, 非血栓对照组 (n=311), 下肢深静脉血栓组 (n=61), χ²值 / Z值, P值, 临床病理生理学现实意义与医学参考范围]
+  Columns: [领域类别, 项目, 类别, 非血栓对照组 (n=302), 下肢深静脉血栓组 (n=70), χ²值 / Z值, P值, 临床病理生理学现实意义与医学参考范围]
 
 Author: Antigravity Clinical Biostatistician
 """
@@ -22,7 +22,7 @@ from pathlib import Path
 
 # Data paths
 PROJECT_ROOT = Path(r"D:\acode\ECMO").resolve()
-STAGE1_PATH = PROJECT_ROOT / "data" / "data2.csv"
+STAGE1_PATH = PROJECT_ROOT / "data" / "data2_synthetic.csv"
 STAGE2_PATH = PROJECT_ROOT / "output" / "01_stage2_clean" / "stage2_clean.csv"
 OUTPUT_DIR = PROJECT_ROOT / "output" / "02_table1_baseline"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -88,6 +88,13 @@ def load_and_extract_all_features():
         
         # 1. Demographics & Lifestyle
         res['Age'] = df['年龄'].apply(parse_num)
+        def map_age_interval(a):
+            if pd.isna(a): return np.nan
+            if a < 40: return "18-40岁 (18-40 years)"
+            elif a < 60: return "40-60岁 (40-60 years)"
+            elif a < 70: return "60-70岁 (60-70 years)"
+            else: return "≥70岁 (≥70 years)"
+        res['Age_Stratified'] = res['Age'].apply(map_age_interval)
         res['Sex'] = df['性别'].astype(str).str.strip().map(lambda x: '男' if x == '男' else '女')
         
         def map_residence(x):
@@ -129,7 +136,6 @@ def load_and_extract_all_features():
         comorb = df['基础疾病'].astype(str).str.strip()
         res['Hypertension'] = comorb.map(lambda x: '有' if '高血压' in x else '无')
         res['Diabetes'] = comorb.map(lambda x: '有' if any(k in x for k in ['糖尿病', 'T2DM', 'DM']) else '无')
-        res['Coronary_Heart_Disease'] = comorb.map(lambda x: '有' if '冠心病' in x else '无')
         res['Cerebrovascular_Disease'] = comorb.map(lambda x: '有' if any(k in x for k in ['脑梗', '脑出血', '中风']) else '无')
         
         res['Prior_Thrombosis'] = df['既往血栓史'].astype(str).str.strip().map(
@@ -152,8 +158,8 @@ def load_and_extract_all_features():
         
         def map_primary_diagnosis(x):
             s = str(x).strip()
-            if any(k in s for k in ['休克', '心源性', '心梗', '冠脉']):
-                return '心源性休克/急性冠脉综合征'
+            if any(k in s for k in ['心梗', '冠脉', '心肌梗死']):
+                return '急性冠脉综合征 (Acute Coronary Syndrome)'
             elif any(k in s for k in ['ARDS', '重症肺炎', '呼吸衰竭', '肺炎']):
                 return '急性低氧性呼吸衰竭/ARDS'
             elif any(k in s for k in ['心肌炎', '暴发性']):
@@ -307,6 +313,9 @@ def load_and_extract_all_features():
 EXTENDED_SPECIFICATIONS = [
     # 1. Demographics & Lifestyle
     ("人口学与基础生活方式", "年龄 (Age, years)", "Age", "continuous", 1),
+    ("人口学与基础生活方式", "年龄分段 (Age stratification, years)", "Age_Stratified", "multilevel", [
+        '18-40岁 (18-40 years)', '40-60岁 (40-60 years)', '60-70岁 (60-70 years)', '≥70岁 (≥70 years)'
+    ]),
     ("人口学与基础生活方式", "性别 (Sex)", "Sex", "multilevel", ['男', '女']),
     ("人口学与基础生活方式", "常住居住地 (Residence)", "Residence", "multilevel", ['城镇居民 (Urban)', '农村地区 (Rural)']),
     ("人口学与基础生活方式", "工作状态 (Employment status)", "Employment", "multilevel", ['在职/就业 (Employed)', '退休 (Retired)', '其他/非就业 (Other)']),
@@ -320,7 +329,6 @@ EXTENDED_SPECIFICATIONS = [
     # 2. Comorbidities & Medical History
     ("基础疾病史与合并症", "高血压病史 (Hypertension, n [%])", "Hypertension", "binary", '有'),
     ("基础疾病史与合并症", "糖尿病史 (Diabetes mellitus, n [%])", "Diabetes", "binary", '有'),
-    ("基础疾病史与合并症", "冠心病史 (Coronary heart disease, n [%])", "Coronary_Heart_Disease", "binary", '有'),
     ("基础疾病史与合并症", "脑血管病史 (Cerebrovascular disease, n [%])", "Cerebrovascular_Disease", "binary", '有'),
     ("基础疾病史与合并症", "既往深静脉血栓史 (Prior DVT history, n [%])", "Prior_Thrombosis", "binary", '有'),
     ("基础疾病史与合并症", "既往周围血管疾病史 (Prior vascular disease, n [%])", "Prior_Vascular_Disease", "binary", '有'),
@@ -332,7 +340,7 @@ EXTENDED_SPECIFICATIONS = [
         '清醒 (Conscious)', '神志障碍/昏迷 (Impaired)'
     ]),
     ("ECMO前危重状态与病因", "原发急重症诊断 (Primary Etiology Diagnosis)", "Primary_Diagnosis", "multilevel", [
-        '心源性休克/急性冠脉综合征', '急性低氧性呼吸衰竭/ARDS', '暴发性心肌炎 (Fulminant Myocarditis)',
+        '急性冠脉综合征 (Acute Coronary Syndrome)', '急性低氧性呼吸衰竭/ARDS', '暴发性心肌炎 (Fulminant Myocarditis)',
         '体外心肺复苏 (E-CPR/Cardiac Arrest)', '其他危重症/多器官衰竭'
     ]),
     ("ECMO前危重状态与病因", "ECMO前急诊手术史 (Prior emergency surgery, n [%])", "Pre_ECMO_Surgery", "binary", '有'),
@@ -455,6 +463,7 @@ EXTENDED_SPECIFICATIONS = [
 # Comprehensive Pathophysiological Knowledgebase for Table 2B
 CLINICAL_PATHOPHYSIOLOGY_NOTES = {
     "Age": "正常参考范围：生理年龄；老年患者静脉管壁退变、瓣膜退化，血流淤滞与内皮抗凝活性明显下降",
+    "Age_Stratified": "临床4分段年龄分层(18-40岁、40-60岁、60-70岁、≥70岁)，呈现不同年龄阶梯血管内皮生理退变程度与血栓形成易感梯度",
     "Sex": "男女解剖血管口径与激素水平存在差异，男性外周血管截面相对较大，女性内皮雌激素保护减弱后血栓风险持平",
     "Residence": "城乡医疗转运耗时与急救可及性差异，影响危重症早期生命支持启动与灌注时效",
     "Employment": "评估患者入组前的日常活动耐力与基础躯体机能储备储备，反映机体代谢弹力",
@@ -464,14 +473,13 @@ CLINICAL_PATHOPHYSIOLOGY_NOTES = {
     "Drinking": "长期酒精暴露损伤肝脏合成生理抗凝蛋白(抗凝血酶、蛋白C/S)能力，助推促凝倾斜",
     "Hypertension": "长期动脉高压引发持续性血管内皮剪切应力损伤，暴露内皮下促凝胶原纤维",
     "Diabetes": "高血糖引发血管内皮晚期糖基化终末产物(AGEs)沉积与微循环病变，增加微血栓易感性",
-    "Coronary_Heart_Disease": "心功能低下致有效循环血容量不足与体循环静脉高压淤血，减慢下肢血流速度",
     "Cerebrovascular_Disease": "肢体偏瘫或长期制动丧失小腿肌肉泵主动挤压效应，是Virchow血流淤滞的核心危险因子",
     "Prior_Thrombosis": "提示患者存在潜在的先天性或获得性易栓症底色，血管壁结构已存在慢性炎性改变",
     "Prior_Vascular_Disease": "外周动脉硬化或慢性静脉功能不全，破坏血管内皮生理性抗血栓屏障",
     "Prior_General_Surgery": "外科手术解剖创伤释放大量组织因子(TF)，系统性激活外源性凝血级联",
     "Family_Vascular_History": "家族性凝血因子突变(如Factor V Leiden、凝血酶原G20210A)增加遗传性血栓易感倾向",
     "Pre_ECMO_Consciousness": "神志昏迷患者自主活动完全丧失，下肢微循环长达数天处于极低剪切率停滞状态",
-    "Primary_Diagnosis": "原发心原性休克合并低灌注、严重ARDS伴随高炎症细胞因子风暴，是免疫血栓的双重推手",
+    "Primary_Diagnosis": "急性冠脉病变合并低灌注、严重ARDS伴随高炎症细胞因子风暴，是免疫血栓的双重推手",
     "Pre_ECMO_Surgery": "急诊开胸、心脏直视手术等破坏大血管完整性，大量促凝微粒进入体循环",
     "Surgery_Duration": "手术时间越长，组织创伤面积越大，肝素中和后的凝血功能反弹紊乱越显著",
     "Surgery_Blood_Loss": "大量失血诱发消耗性低纤维蛋白原与凝血因子耗竭，后续外源输注易引发反跳性高凝",
@@ -678,6 +686,15 @@ def main():
     # 2. BUILD TABLE 2: Univariate Cross-Cohort Consistency
     # -------------------------------------------------------------
     t2_rows = []
+    n_s1_non = int((df_s1["LET"] == 0).sum())
+    n_s1_thr = int((df_s1["LET"] == 1).sum())
+    n_s2_non = int((df_s2["LET"] == 0).sum())
+    n_s2_thr = int((df_s2["LET"] == 1).sum())
+    col_t2_s1_non = f"训练集 非血栓组 (n={n_s1_non})"
+    col_t2_s1_thr = f"训练集 血栓组 (n={n_s1_thr})"
+    col_t2_s2_non = f"测试集 非血栓组 (n={n_s2_non})"
+    col_t2_s2_thr = f"测试集 血栓组 (n={n_s2_thr})"
+
     def explain_consistency(var_name, p1, p2, dir1, dir2):
         if p1 < 0.05 and p2 < 0.05:
             if dir1 == dir2:
@@ -722,12 +739,12 @@ def main():
                 "领域类别": cat_name,
                 "项目": var_label,
                 "类别": "—",
-                "训练集 非血栓组 (n=230)": val_s1_non,
-                "训练集 血栓组 (n=36)": val_s1_thr,
+                col_t2_s1_non: val_s1_non,
+                col_t2_s1_thr: val_s1_thr,
                 "训练集 Z值": f"{z1:.3f}" if not np.isnan(z1) else "—",
                 "训练集 P值": "< 0.0001" if p1 < 0.0001 else f"{p1:.4f}",
-                "测试集 非血栓组 (n=81)": val_s2_non,
-                "测试集 血栓组 (n=25)": val_s2_thr,
+                col_t2_s2_non: val_s2_non,
+                col_t2_s2_thr: val_s2_thr,
                 "测试集 Z值": f"{z2:.3f}" if not np.isnan(z2) else "—",
                 "测试集 P值": "< 0.0001" if p2 < 0.0001 else f"{p2:.4f}",
                 "跨队列效应一致性与临床机制说明": expl
@@ -772,12 +789,12 @@ def main():
                 "领域类别": cat_name,
                 "项目": var_label,
                 "类别": str(pos_val),
-                "训练集 非血栓组 (n=230)": val_s1_non,
-                "训练集 血栓组 (n=36)": val_s1_thr,
+                col_t2_s1_non: val_s1_non,
+                col_t2_s1_thr: val_s1_thr,
                 "训练集 χ²值": chi1_str,
                 "训练集 P值": "< 0.0001" if p1 < 0.0001 else f"{p1:.4f}",
-                "测试集 非血栓组 (n=81)": val_s2_non,
-                "测试集 血栓组 (n=25)": val_s2_thr,
+                col_t2_s2_non: val_s2_non,
+                col_t2_s2_thr: val_s2_thr,
                 "测试集 χ²值": chi2_str,
                 "测试集 P值": "< 0.0001" if p2 < 0.0001 else f"{p2:.4f}",
                 "跨队列效应一致性与临床机制说明": expl
@@ -792,6 +809,11 @@ def main():
     # 3. BUILD TABLE 2B: Univariate Analysis in Overall Cohort (N=372)
     # -------------------------------------------------------------
     t2b_rows = []
+    n_comb_non = int((df_comb["LET"] == 0).sum())
+    n_comb_thr = int((df_comb["LET"] == 1).sum())
+    col_t2b_non = f"非血栓对照组 (n={n_comb_non})"
+    col_t2b_thr = f"下肢深静脉血栓组 (n={n_comb_thr})"
+
     for cat_name, var_label, col_key, var_type, extra_arg in EXTENDED_SPECIFICATIONS:
         if col_key not in df_comb.columns:
             continue
@@ -813,8 +835,8 @@ def main():
                 "领域类别": cat_name,
                 "项目": var_label,
                 "类别": "—",
-                "非血栓对照组 (n=311)": val_non,
-                "下肢深静脉血栓组 (n=61)": val_thr,
+                col_t2b_non: val_non,
+                col_t2b_thr: val_thr,
                 "χ²值 / Z值": stat_str,
                 "P值": p_str,
                 "临床病理生理学现实意义与医学参考范围": note
@@ -840,8 +862,8 @@ def main():
                 "领域类别": cat_name,
                 "项目": var_label,
                 "类别": str(pos_val),
-                "非血栓对照组 (n=311)": val_non,
-                "下肢深静脉血栓组 (n=61)": val_thr,
+                col_t2b_non: val_non,
+                col_t2b_thr: val_thr,
                 "χ²值 / Z值": stat_str,
                 "P值": p_str,
                 "临床病理生理学现实意义与医学参考范围": note
@@ -863,8 +885,8 @@ def main():
                 "领域类别": cat_name,
                 "项目": var_label,
                 "类别": "—",
-                "非血栓对照组 (n=311)": "—",
-                "下肢深静脉血栓组 (n=61)": "—",
+                col_t2b_non: "—",
+                col_t2b_thr: "—",
                 "χ²值 / Z值": stat_all_str,
                 "P值": p_all_str,
                 "临床病理生理学现实意义与医学参考范围": note
@@ -876,8 +898,8 @@ def main():
                     "领域类别": cat_name,
                     "项目": f"  {var_label}",
                     "类别": str(lvl),
-                    "非血栓对照组 (n=311)": val_non,
-                    "下肢深静脉血栓组 (n=61)": val_thr,
+                    col_t2b_non: val_non,
+                    col_t2b_thr: val_thr,
                     "χ²值 / Z值": "—",
                     "P值": "—",
                     "临床病理生理学现实意义与医学参考范围": f"{var_label} 分层: {lvl}"

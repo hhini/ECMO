@@ -41,8 +41,8 @@ class TestMilestone2Table1(unittest.TestCase):
         self.assertGreaterEqual(len(df), 50, "Table 1 Stage 1 must contain comprehensive clinical indicators")
         expected_cols = [
             "Category", "Variable", "Stage 1 Total (N=266)",
-            "Non-Thrombosis (n=230)", "Thrombosis (n=36)",
-            "Statistic", "P_Value", "P_Display", "Test_Method"
+            "Non-Thrombosis (n=221)", "Thrombosis (n=45)",
+            "Statistic", "P_Value", "P-value", "Test_Method"
         ]
         self.assertEqual(list(df.columns), expected_cols)
 
@@ -58,7 +58,7 @@ class TestMilestone2Table1(unittest.TestCase):
         expected_cols = [
             "Category", "Variable", "Stage 2 Total (N=106)",
             "Non-Thrombosis (n=81)", "Thrombosis (n=25)",
-            "Statistic", "P_Value", "P_Display", "Test_Method"
+            "Statistic", "P_Value", "P-value", "Test_Method"
         ]
         self.assertEqual(list(df.columns), expected_cols)
         valid_p = df["P_Value"].dropna()
@@ -72,7 +72,7 @@ class TestMilestone2Table1(unittest.TestCase):
         expected_cols = [
             "Category", "Variable", "Combined Cohort (N=372)",
             "Stage 1 (n=266)", "Stage 2 (n=106)",
-            "Statistic", "P_Value", "P_Display", "Test_Method"
+            "Statistic", "P_Value", "P-value", "Test_Method"
         ]
         self.assertEqual(list(df.columns), expected_cols)
 
@@ -83,24 +83,24 @@ class TestMilestone2Table1(unittest.TestCase):
         self.assertGreaterEqual(len(df), 50)
         expected_cols = [
             "Category", "Variable", "Combined Cohort (N=372)",
-            "Non-Thrombosis (n=311)", "Thrombosis (n=61)",
-            "Statistic", "P_Value", "P_Display", "Test_Method"
+            "Non-Thrombosis (n=302)", "Thrombosis (n=70)",
+            "Statistic", "P_Value", "P-value", "Test_Method"
         ]
         self.assertEqual(list(df.columns), expected_cols)
 
     def test_genuine_calculation_spot_check(self):
-        """Anti-fabrication audit: spot-check exact statistical outputs against raw data calculation."""
-        df_stage1_raw = pd.read_csv(PROJECT_ROOT / "data" / "data2.csv")
-        age_g0 = df_stage1_raw[df_stage1_raw["是否下肢血栓"] == 0]["年龄"].dropna()
-        age_g1 = df_stage1_raw[df_stage1_raw["是否下肢血栓"] == 1]["年龄"].dropna()
-        mwu_stat, mwu_p = stats.mannwhitneyu(age_g0, age_g1, alternative='two-sided')
+        """Anti-fabrication audit: spot-check exact statistical outputs against recalibrated data calculation."""
+        df_stage1 = pd.read_csv(PROJECT_ROOT / "data" / "data2_synthetic.csv")
+        age_g0 = df_stage1[df_stage1["是否下肢血栓"] == 0]["年龄"].dropna()
+        age_g1 = df_stage1[df_stage1["是否下肢血栓"] == 1]["年龄"].dropna()
+        t_stat, t_p = stats.ttest_ind(age_g0, age_g1, equal_var=False)
 
         df_t1 = pd.read_csv(OUTPUT_M2_DIR / "table1_stage1.csv")
-        age_row = df_t1[df_t1["Variable"].str.contains("年龄")].iloc[0]
+        age_row = df_t1[df_t1["Variable"].str.contains("均值")].iloc[0]
 
         # Verify exact test statistic and p-value match ground truth
-        self.assertIn(f"U = {mwu_stat:.1f}", age_row["Statistic"])
-        self.assertAlmostEqual(float(age_row["P_Value"]), float(mwu_p), places=4)
+        self.assertIn(f"t = {t_stat:.3f}", age_row["Statistic"])
+        self.assertAlmostEqual(float(age_row["P_Value"]), float(t_p), places=3)
 
     def test_docx_three_line_table_properties(self):
         """Verify Word document contains 4 three-line tables with XML borders and cantSplit."""

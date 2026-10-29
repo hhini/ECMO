@@ -365,7 +365,12 @@ def build_full_report():
     # -------------------------------------------------------------
     # Table 2: Univariate Analysis Across Cohorts & Consistency Verification
     # -------------------------------------------------------------
-    t2_header = ["项目", "类别", "训练集 非血栓组 (n=230)", "训练集 血栓组 (n=36)", "训练集 Z/χ²", "训练集 P值", "测试集 非血栓组 (n=81)", "测试集 血栓组 (n=25)", "测试集 Z/χ²", "测试集 P值", "跨队列效应一致性说明"]
+    col_t2_tr_non = [c for c in df_t2.columns if "训练集" in c and "非血栓" in c][0]
+    col_t2_tr_pos = [c for c in df_t2.columns if "训练集" in c and "血栓" in c and "非" not in c][0]
+    col_t2_te_non = [c for c in df_t2.columns if "测试集" in c and "非血栓" in c][0]
+    col_t2_te_pos = [c for c in df_t2.columns if "测试集" in c and "血栓" in c and "非" not in c][0]
+
+    t2_header = ["项目", "类别", col_t2_tr_non, col_t2_tr_pos, "训练集 Z/χ²", "训练集 P值", col_t2_te_non, col_t2_te_pos, "测试集 Z/χ²", "测试集 P值", "跨队列效应一致性说明"]
     t2_table_data = [t2_header]
     current_cat = ""
     for _, r in df_t2.iterrows():
@@ -378,18 +383,18 @@ def build_full_report():
         t2_table_data.append([
             str(r["项目"]),
             str(r["类别"]),
-            str(r["训练集 非血栓组 (n=230)"]),
-            str(r["训练集 血栓组 (n=36)"]),
+            str(r[col_t2_tr_non]),
+            str(r[col_t2_tr_pos]),
             stat_train,
             str(r["训练集 P值"]),
-            str(r["测试集 非血栓组 (n=81)"]),
-            str(r["测试集 血栓组 (n=25)"]),
+            str(r[col_t2_te_non]),
+            str(r[col_t2_te_pos]),
             stat_test,
             str(r["测试集 P值"]),
             str(r["跨队列效应一致性与临床机制说明"])
         ])
         
-    t2_title = "Table 2. 训练集与测试集下肢深静脉血栓单因素特征对比及跨队列效应一致性验证表 (Univariate Analysis Across Cohorts & Effect Consistency Verification)"
+    t2_title = "Table 2. 训练集与测试集下肢血栓形成单因素特征对比及跨队列效应一致性验证表 (Univariate Analysis Across Cohorts & Effect Consistency Verification)"
     t2_note = "[注：连续变量呈偏态分布者以中位数 (四分位数间距) M (P25, P75) 描述，采用Mann-Whitney U检验 (Z值)；分类变量以频数 (百分比) n (%) 描述，采用Pearson χ²检验；P < 0.05 具备统计学显著性。跨队列双向对比训练集 (n=266) 与独立测试集 (n=106) 的单因素风险因子效应方向与稳健性]"
     add_custom_table(doc, t2_table_data, t2_title, t2_note)
     md_output_lines.append(table_to_markdown(t2_table_data, t2_title, t2_note))
@@ -397,7 +402,10 @@ def build_full_report():
     # -------------------------------------------------------------
     # Table 2B: Univariate Analysis in Overall Cohort (N=372)
     # -------------------------------------------------------------
-    t2b_header = ["项目", "类别", "非血栓对照组 (n=311)", "下肢深静脉血栓组 (n=61)", "χ²值 / Z值", "P值", "临床病理生理学现实意义与医学参考范围"]
+    col_t2b_non = [c for c in df_t2b.columns if "非血栓" in c][0]
+    col_t2b_pos = [c for c in df_t2b.columns if "血栓" in c and "非" not in c][0]
+
+    t2b_header = ["项目", "类别", col_t2b_non, col_t2b_pos, "χ²值 / Z值", "P值", "临床病理生理学现实意义与医学参考范围"]
     t2b_table_data = [t2b_header]
     current_cat = ""
     for _, r in df_t2b.iterrows():
@@ -408,8 +416,8 @@ def build_full_report():
         t2b_table_data.append([
             str(r["项目"]),
             str(r["类别"]),
-            str(r["非血栓对照组 (n=311)"]),
-            str(r["下肢深静脉血栓组 (n=61)"]),
+            str(r[col_t2b_non]),
+            str(r[col_t2b_pos]),
             str(r["χ²值 / Z值"]),
             str(r["P值"]),
             str(r["临床病理生理学现实意义与医学参考范围"])

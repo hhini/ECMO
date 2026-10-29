@@ -93,15 +93,15 @@ logger.info(f"Compatibility Output Directory: {DIR_M4_EXTERNAL}")
 
 # Domain constants
 TARGET_COLUMN = "是否下肢血栓"
-CONSENSUS_FEATURES = ["APTT_D0", "PLT_D2", "WBC_D0", "FIB_D2"]
+CONSENSUS_FEATURES = ["DD_D0", "FIB_D0", "FIB_D2", "Underlying_Hyperlipidemia"]
 MODEL_NAMES = ["LR", "SVM", "RF", "DT", "XGB", "NB"]
 
 # Baseline training medians for leakage-free imputation
 TRAIN_BASELINE_MEDIANS = {
-    "APTT_D0": 32.77,
-    "PLT_D2": 113.00,
-    "WBC_D0": 11.13,
-    "FIB_D2": 2.71
+    "DD_D0": 1.45,
+    "FIB_D0": 2.50,
+    "FIB_D2": 2.80,
+    "Underlying_Hyperlipidemia": 0.0
 }
 
 # Publication aesthetics (Lancet / Nature standard)
@@ -295,24 +295,38 @@ def load_and_harmonize_stage2_data() -> Tuple[pd.DataFrame, pd.Series]:
     neg_count = int(np.sum(y_stage2 == 0))
     logger.info(f"Target Distribution: Total={len(y_stage2)}, Positive={pos_count}, Negative={neg_count} (Prevalence={pos_count/len(y_stage2)*100:.1f}%)")
     
-    # Column mapping to resolve clinical laboratory naming conventions
-    col_map = {
-        "APTT": "APTT_D0",
-        "PLT.1": "PLT_D2",
-        "WBC": "WBC_D0",
-        "FIB.1": "FIB_D2",
-    }
-    
+    # Extract consensus features with robust clinical parsing
     X_dict = {}
     for feat in CONSENSUS_FEATURES:
-        if feat in df_raw.columns:
-            X_dict[feat] = pd.to_numeric(df_raw[feat], errors="coerce").values
+        if feat == "DD_D0":
+            src = "上机前DD" if "上机前DD" in df_raw.columns else "DD_D0"
+            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            X_dict[feat] = np.log1p(pd.to_numeric(s, errors="coerce").clip(lower=0)).values
+        elif feat == "FIB_D0":
+            src = "FIB" if "FIB" in df_raw.columns else "FIB_D0"
+            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
+        elif feat == "FIB_D2":
+            src = "FIB.1" if "FIB.1" in df_raw.columns else "FIB_D2"
+            s = df_raw[src].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
+        elif feat == "Underlying_Hyperlipidemia":
+            if "Underlying_Hyperlipidemia" in df_raw.columns:
+                X_dict[feat] = pd.to_numeric(df_raw["Underlying_Hyperlipidemia"], errors="coerce").fillna(0).values
+            else:
+                comorb = df_raw["基础疾病"].fillna("无").astype(str)
+                X_dict[feat] = comorb.map(lambda x: 1 if "高脂血症" in x else 0).values
+        elif feat in df_raw.columns:
+            s = df_raw[feat].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
         else:
+            col_map = {"APTT": "APTT_D0", "PLT.1": "PLT_D2", "WBC": "WBC_D0", "FIB.1": "FIB_D2"}
             rev_cands = [k for k, v in col_map.items() if v == feat]
             matched = False
             for cand in rev_cands:
                 if cand in df_raw.columns:
-                    X_dict[feat] = pd.to_numeric(df_raw[cand], errors="coerce").values
+                    s = df_raw[cand].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+                    X_dict[feat] = pd.to_numeric(s, errors="coerce").values
                     matched = True
                     break
             if not matched:

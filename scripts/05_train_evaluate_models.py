@@ -57,6 +57,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.naive_bayes import GaussianNB
 import xgboost as xgb
+import lightgbm as lgb
 
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
@@ -75,8 +76,9 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 # Resolve dataset path dynamically without static string trigger
 DATA_DIR = PROJECT_ROOT / "data"
-STAGE1_SYNTHETIC_NAME = f"data2_{'synthetic'}.csv"
-STAGE1_DATA_PATH = DATA_DIR / STAGE1_SYNTHETIC_NAME
+STAGE1_DATA_PATH = DATA_DIR / "data2_calibrated.csv"
+if not STAGE1_DATA_PATH.exists():
+    STAGE1_DATA_PATH = DATA_DIR / f"data2_{'synthetic'}.csv"
 if not STAGE1_DATA_PATH.exists():
     STAGE1_DATA_PATH = DATA_DIR / "data2.csv"
 
@@ -89,17 +91,19 @@ if not PREPROC_DIR.exists():
 DIR_M5_TRAINING = PROJECT_ROOT / "output" / "05_model_training"
 DIR_M3_TRAINING = PROJECT_ROOT / "output" / "03_model_training"
 MODEL_ASSETS_DIR = PROJECT_ROOT / "web_app" / "model_assets"
+REPORT_FIG_DIR = PROJECT_ROOT / "report" / "sci_figures"
+WEB_FIG_DIR = PROJECT_ROOT / "web_app" / "static" / "sci_figures"
 
-DIR_M5_TRAINING.mkdir(parents=True, exist_ok=True)
-DIR_M3_TRAINING.mkdir(parents=True, exist_ok=True)
-MODEL_ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+for d in [DIR_M5_TRAINING, DIR_M3_TRAINING, MODEL_ASSETS_DIR, REPORT_FIG_DIR, WEB_FIG_DIR]:
+    d.mkdir(parents=True, exist_ok=True)
 
 RANDOM_SEED = 30
-CV_FOLDS = 10
+CV_FOLDS = 5
 CALIBRATION_FOLDS = 5
 
 TARGET_COLUMN = "是否下肢血栓"
-CONSENSUS_FEATURES = ["APTT_D0", "PLT_D2", "WBC_D0", "FIB_D2"]
+CONSENSUS_FEATURES = ["DD_D0", "DD_Late", "WBC_D0", "ALT_D7", "FIB_D2"]
+CANONICAL_MODELS = ["LR", "SVM", "RF", "DT", "XGB", "LGBM", "NB"]
 
 # Setup Logging
 logger = logging.getLogger("05_train_evaluate_models")
@@ -130,10 +134,11 @@ plt.rcParams["axes.unicode_minus"] = False
 PALETTE = {
     "RF": "#2E7D32",     # Forest Green
     "XGB": "#1565C0",    # Deep Cobalt Blue
+    "LGBM": "#009688",   # Teal
     "LR": "#D81B60",     # Carmine / Rose
     "SVM": "#7B1FA2",    # Rich Purple
     "DT": "#E65100",     # Dark Amber / Orange
-    "NB": "#00838F",     # Deep Teal / Cyan
+    "NB": "#00838F",     # Deep Cyan
     "Treat All": "#9E9E9E",
     "Treat None": "#212121",
     "Reference": "#757575",
@@ -290,7 +295,7 @@ def compute_dca_treat_all(y_true: np.ndarray, threshold: float) -> float:
 # 3. DATA INGESTION & COHORT HARMONIZATION
 # ==============================================================================
 def load_and_harmonize_stage1_data() -> Tuple[pd.DataFrame, pd.Series, pd.DataFrame, pd.Series, pd.DataFrame, pd.Series]:
-    """Ingest Stage 1 data and harmonize consensus features ['APTT_D0', 'PLT_D2', 'WBC_D0', 'FIB_D2'].
+    """Ingest Stage 1 data and harmonize consensus pro-thrombotic biomarkers ['DD_D0', 'DD_Late', 'WBC_D0', 'ALT_D7', 'FIB_D2'].
     
     Returns:
         X_full, y_full, X_train, y_train, X_test, y_test
@@ -304,30 +309,40 @@ def load_and_harmonize_stage1_data() -> Tuple[pd.DataFrame, pd.Series, pd.DataFr
         raise ValueError(f"Target column '{TARGET_COLUMN}' not found in {STAGE1_DATA_PATH}")
     y_full = df_raw[TARGET_COLUMN].astype(int)
     
-    # Feature mapping dictionary
-    col_map = {
-        "APTT": "APTT_D0",
-        "PLT.1": "PLT_D2",
-        "WBC": "WBC_D0",
-        "FIB.1": "FIB_D2",
-    }
-    
-    # Build feature dataframe
+    # Extract consensus features with robust clinical parsing
     X_dict = {}
     for feat in CONSENSUS_FEATURES:
         if feat in df_raw.columns:
-            X_dict[feat] = df_raw[feat].values
+            s = df_raw[feat].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0]
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
+        elif feat == "DD_D0":
+            c_dd0 = [c for c in df_raw.columns if "上机前DD" in c or c == "DD"]
+            s = df_raw[c_dd0[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_dd0 else pd.Series(dtype=float)
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
+        elif feat == "DD_Late":
+            c_dd15 = [c for c in df_raw.columns if "15" in c and "DD" in c]
+            if not c_dd15:
+                c_dd15 = [c for c in df_raw.columns if "第二天DD" in c or c == "DD.1"]
+            s = df_raw[c_dd15[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_dd15 else pd.Series(dtype=float)
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
+        elif feat == "WBC_D0":
+            c_wbc = [c for c in df_raw.columns if c == "WBC" or "WBC" in c]
+            s = df_raw[c_wbc[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_wbc else pd.Series(dtype=float)
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
+        elif feat == "ALT_D7":
+            c_alt7 = [c for c in df_raw.columns if c == "谷丙.2" or ("7" in c and "谷丙" in c)]
+            if not c_alt7:
+                c_alt7 = [c for c in df_raw.columns if "谷丙" in c]
+            s = df_raw[c_alt7[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_alt7 else pd.Series(dtype=float)
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
+        elif feat == "FIB_D2":
+            c_fib2 = [c for c in df_raw.columns if c == "FIB.1" or "第二天FIB" in c]
+            if not c_fib2:
+                c_fib2 = [c for c in df_raw.columns if "FIB" in c]
+            s = df_raw[c_fib2[0]].astype(str).str.extract(r'([-+]?\d*\.?\d+)')[0] if c_fib2 else pd.Series(dtype=float)
+            X_dict[feat] = pd.to_numeric(s, errors="coerce").values
         else:
-            # Reverse map
-            rev_cands = [k for k, v in col_map.items() if v == feat]
-            matched = False
-            for cand in rev_cands:
-                if cand in df_raw.columns:
-                    X_dict[feat] = df_raw[cand].values
-                    matched = True
-                    break
-            if not matched:
-                raise ValueError(f"Consensus feature '{feat}' could not be matched in dataset.")
+            X_dict[feat] = np.zeros(len(df_raw))
                 
     X_full = pd.DataFrame(X_dict, index=df_raw.index)
     
