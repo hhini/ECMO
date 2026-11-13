@@ -684,8 +684,7 @@ def main():
             val_s1 = format_cont_m_iqr(s1, decimals=dec)
             val_s2 = format_cont_m_iqr(s2, decimals=dec)
             z_val, p_val = compute_mann_whitney_z(s1, s2)
-            z_str = f"{z_val:.3f}" if not np.isnan(z_val) else "—"
-            chi_str = "—"
+            stat_str = f"Z = {z_val:.3f}" if not np.isnan(z_val) else "—"
             p_str = "< 0.0001" if p_val < 0.0001 else f"{p_val:.4f}"
             t1_rows.append({
                 "领域类别": cat_name,
@@ -693,8 +692,7 @@ def main():
                 "类别": "—",
                 f"训练集 (n={n_train})": val_s1,
                 f"测试集 (n={n_test})": val_s2,
-                "Z值": z_str,
-                "χ²值": chi_str,
+                "Z / χ²值": stat_str,
                 "P值": p_str
             })
         elif var_type == "binary":
@@ -709,11 +707,10 @@ def main():
             )
             if c_tab.shape == (2, 2):
                 chi2, p_val, _, _ = stats.chi2_contingency(c_tab, correction=False)
-                chi_str = f"{chi2:.3f}"
+                stat_str = f"χ² = {chi2:.3f}"
             else:
-                chi_str = "—"
+                stat_str = "—"
                 p_val = 1.0
-            z_str = "—"
             p_str = "< 0.0001" if p_val < 0.0001 else f"{p_val:.4f}"
             t1_rows.append({
                 "领域类别": cat_name,
@@ -721,8 +718,7 @@ def main():
                 "类别": str(pos_val),
                 f"训练集 (n={n_train})": val_s1,
                 f"测试集 (n={n_test})": val_s2,
-                "Z值": z_str,
-                "χ²值": chi_str,
+                "Z / χ²值": stat_str,
                 "P值": p_str
             })
         elif var_type == "multilevel":
@@ -733,10 +729,10 @@ def main():
             )
             if c_tab_all.shape[0] == 2 and c_tab_all.shape[1] > 1:
                 chi2_all, p_val_all, _, _ = stats.chi2_contingency(c_tab_all, correction=False)
-                chi_all_str = f"{chi2_all:.3f}"
+                stat_all_str = f"χ² = {chi2_all:.3f}"
                 p_all_str = "< 0.0001" if p_val_all < 0.0001 else f"{p_val_all:.4f}"
             else:
-                chi_all_str = "—"
+                stat_all_str = "—"
                 p_all_str = "1.0000"
             t1_rows.append({
                 "领域类别": cat_name,
@@ -744,8 +740,7 @@ def main():
                 "类别": "—",
                 f"训练集 (n={n_train})": "—",
                 f"测试集 (n={n_test})": "—",
-                "Z值": "—",
-                "χ²值": chi_all_str,
+                "Z / χ²值": stat_all_str,
                 "P值": p_all_str
             })
             for lvl in levels:
@@ -757,8 +752,7 @@ def main():
                     "类别": str(lvl),
                     f"训练集 (n={n_train})": val_s1,
                     f"测试集 (n={n_test})": val_s2,
-                    "Z值": "—",
-                    "χ²值": "—",
+                    "Z / χ²值": "—",
                     "P值": "—"
                 })
 
@@ -826,11 +820,11 @@ def main():
                 "类别": "—",
                 col_t2_s1_non: val_s1_non,
                 col_t2_s1_thr: val_s1_thr,
-                "训练集 Z值": f"{z1:.3f}" if not np.isnan(z1) else "—",
+                "训练集 Z / χ²值": f"Z = {z1:.3f}" if not np.isnan(z1) else "—",
                 "训练集 P值": "< 0.0001" if p1 < 0.0001 else f"{p1:.4f}",
                 col_t2_s2_non: val_s2_non,
                 col_t2_s2_thr: val_s2_thr,
-                "测试集 Z值": f"{z2:.3f}" if not np.isnan(z2) else "—",
+                "测试集 Z / χ²值": f"Z = {z2:.3f}" if not np.isnan(z2) else "—",
                 "测试集 P值": "< 0.0001" if p2 < 0.0001 else f"{p2:.4f}",
                 "跨队列效应一致性与临床机制说明": expl
             })
@@ -846,7 +840,7 @@ def main():
             )
             if c_tab1.shape == (2, 2):
                 chi1, p1, _, _ = stats.chi2_contingency(c_tab1, correction=False)
-                chi1_str = f"{chi1:.3f}"
+                chi1_str = f"χ² = {chi1:.3f}"
             else:
                 chi1_str = "—"
                 p1 = 1.0
@@ -861,7 +855,7 @@ def main():
             )
             if c_tab2.shape == (2, 2):
                 chi2, p2, _, _ = stats.chi2_contingency(c_tab2, correction=False)
-                chi2_str = f"{chi2:.3f}"
+                chi2_str = f"χ² = {chi2:.3f}"
             else:
                 chi2_str = "—"
                 p2 = 1.0
@@ -876,11 +870,11 @@ def main():
                 "类别": str(pos_val),
                 col_t2_s1_non: val_s1_non,
                 col_t2_s1_thr: val_s1_thr,
-                "训练集 χ²值": chi1_str,
+                "训练集 Z / χ²值": chi1_str,
                 "训练集 P值": "< 0.0001" if p1 < 0.0001 else f"{p1:.4f}",
                 col_t2_s2_non: val_s2_non,
                 col_t2_s2_thr: val_s2_thr,
-                "测试集 χ²值": chi2_str,
+                "测试集 Z / χ²值": chi2_str,
                 "测试集 P值": "< 0.0001" if p2 < 0.0001 else f"{p2:.4f}",
                 "跨队列效应一致性与临床机制说明": expl
             })
@@ -892,7 +886,7 @@ def main():
             )
             if c_tab1.shape[0] == 2 and c_tab1.shape[1] > 1:
                 chi1, p1, _, _ = stats.chi2_contingency(c_tab1, correction=False)
-                chi1_str = f"{chi1:.3f}"
+                chi1_str = f"χ² = {chi1:.3f}"
             else:
                 chi1_str = "—"
                 p1 = 1.0
@@ -903,7 +897,7 @@ def main():
             )
             if c_tab2.shape[0] == 2 and c_tab2.shape[1] > 1:
                 chi2, p2, _, _ = stats.chi2_contingency(c_tab2, correction=False)
-                chi2_str = f"{chi2:.3f}"
+                chi2_str = f"χ² = {chi2:.3f}"
             else:
                 chi2_str = "—"
                 p2 = 1.0
@@ -916,11 +910,11 @@ def main():
                 "类别": "—",
                 col_t2_s1_non: "—",
                 col_t2_s1_thr: "—",
-                "训练集 χ²值": chi1_str,
+                "训练集 Z / χ²值": chi1_str,
                 "训练集 P值": "< 0.0001" if p1 < 0.0001 else f"{p1:.4f}",
                 col_t2_s2_non: "—",
                 col_t2_s2_thr: "—",
-                "测试集 χ²值": chi2_str,
+                "测试集 Z / χ²值": chi2_str,
                 "测试集 P值": "< 0.0001" if p2 < 0.0001 else f"{p2:.4f}",
                 "跨队列效应一致性与临床机制说明": expl
             })
@@ -935,11 +929,11 @@ def main():
                     "类别": str(lvl),
                     col_t2_s1_non: val_s1_non,
                     col_t2_s1_thr: val_s1_thr,
-                    "训练集 χ²值": "—",
+                    "训练集 Z / χ²值": "—",
                     "训练集 P值": "—",
                     col_t2_s2_non: val_s2_non,
                     col_t2_s2_thr: val_s2_thr,
-                    "测试集 χ²值": "—",
+                    "测试集 Z / χ²值": "—",
                     "测试集 P值": "—",
                     "跨队列效应一致性与临床机制说明": f"分层构成比: {lvl}"
                 })
