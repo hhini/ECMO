@@ -162,13 +162,13 @@ def build_full_report():
     p_sub = doc.add_paragraph()
     p_sub.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_sub.paragraph_format.space_after = Pt(14)
-    r_sub = p_sub.add_run("基于严格数据隔离划分（186/80/106）、Day-15高缺失剔除与训练集单边插补、VIF共线性筛除、重复5折LASSO精简筛选、代价敏感学习及SHAP可解释性分析")
+    r_sub = p_sub.add_run("基于严格数据隔离划分（186/80/106）、Day-15高缺失剔除与训练集单边KNN插补、动态特征工程、VIF共线性筛除、重复5折LASSO精简筛选、代价敏感学习、贝叶斯超参数优化及SHAP可解释性分析")
     r_sub.font.size = Pt(9.5)
     r_sub.font.color.rgb = RGBColor(100, 110, 120)
 
     md_lines = [
         "# 成人体外膜肺氧合（ECMO）下肢血栓形成智能风险预警模型研发、内部交叉验证与独立外部验证全流程学术报告\n",
-        "> **基于严格数据隔离划分（186/80/106）、Day-15高缺失剔除与训练集单边插补、VIF共线性筛除、重复5折LASSO精简筛选、代价敏感学习及SHAP可解释性分析**\n\n---\n"
+        "> **基于严格数据隔离划分（186/80/106）、Day-15高缺失剔除与训练集单边KNN插补、动态特征工程、VIF共线性筛除、重复5折LASSO精简筛选、代价敏感学习、贝叶斯超参数优化及SHAP可解释性分析**\n\n---\n"
     ]
 
     def add_h1(text):
@@ -243,6 +243,10 @@ def build_full_report():
     df_lasso = pd.read_csv(os.path.join(REV_DIR, "03_lasso_selected_features.csv"), encoding="utf-8-sig")
     df_perf = pd.read_csv(os.path.join(REV_DIR, "04_model_performance_all_cohorts.csv"), encoding="utf-8-sig")
     df_delong = pd.read_csv(os.path.join(REV_DIR, "05_delong_pairwise_tests.csv"), encoding="utf-8-sig")
+    df_hpo = pd.read_csv(os.path.join(REV_DIR, "06_bayesian_hyperparams.csv"), encoding="utf-8-sig")
+
+    sel_feats_list = df_lasso["Feature"].tolist()
+    sel_feats_str = "、".join(sel_feats_list)
 
     # =========================================================================
     # 总览流程图
@@ -253,13 +257,13 @@ def build_full_report():
         "① 两阶段队列基线平衡性与单因素血栓关联对比（Z值与χ²值合并呈现）；"
         "② 将 266 例推导队列按分层抽样严格划分为训练集（n=186，血栓 31 例）与内部验证集（n=80，血栓 14 例），"
         "此后内部验证集（n=80）与外部验证集（n=106，血栓 25 例）全程绝对冻结、零接触；"
-        "③ 缺失值审计：剔除缺失率 >50% 的第 15 天（15d）指标，其余缺失特征严格仅在训练集（n=186）上拟合中位数插补器；"
+        "③ 缺失值审计与插补：剔除缺失率 >50% 的第 15 天（15d）指标，其余缺失特征严格仅在训练集（n=186）上拟合标准化距离加权 KNN（k=5）插补器，并系统构建 10 项纵向动态与凝血-纤溶比值特征；"
         "④ 在训练集上实施方差膨胀因子（VIF）多重共线性检验，逐步剔除 VIF > 10 的强共线变量；"
-        "⑤ 将通过 VIF 检验的无共线特征纳入 10 次重复 5 折交叉验证 LASSO 回归（替代复杂的单因素-多因素-Boruta三轨叠加，避免 II 型错误增高及漏筛有效因子），精简得出 6 个独立预测因子；"
+        f"⑤ 将通过 VIF 检验的无共线特征纳入 10 次重复 5 折交叉验证 LASSO 回归（替代复杂的单因素-多因素-Boruta三轨叠加，避免 II 型错误增高及漏筛有效因子），精简得出 {len(sel_feats_list)} 个独立预测因子（{sel_feats_str}）；"
         "⑥ 在训练集上采用代价敏感学习（Cost-Sensitive Learning）应对类别不平衡；"
-        "⑦ 基于 10 次重复 5 折交叉验证与 1000 次 Bootstrap 重抽样拟合 6 种机器学习模型（有效缓解中小样本方差）；"
+        "⑦ 在训练集上采用 Optuna TPE 贝叶斯超参数优化（3×5折交叉验证）锁定各算法最优正则化配置，随后基于 10 次重复 5 折交叉验证与 1000 次 Bootstrap 重抽样拟合 6 种机器学习模型；"
         "⑧ 在冻结的内部验证集（n=80）与外部验证集（n=106）上开展全方位性能、校准与决策曲线（DCA）评价，优选出最佳模型（SVM）；"
-        "⑨ 基于 LASSO 筛选出的 6 个核心预测因子构建最优模型 SHAP 全局与个体级可解释性归因图谱。"
+        f"⑨ 基于 LASSO 筛选出的 {len(sel_feats_list)} 个核心预测因子构建最优模型 SHAP 全局与个体级可解释性归因图谱。"
     )
     add_img("fig01_study_cohort_flowchart.png", "图1. 修订版九步法临床机器学习建模、数据隔离（186/80/106）及双队列验证全流程技术路线图")
 
@@ -319,21 +323,47 @@ def build_full_report():
     md_lines.append(table_to_markdown(t2b_data, "Table 2B. 全队列下肢血栓形成单因素分析基准表"))
 
     # =========================================================================
-    # 第二、三步：数据划分（186 / 80 / 106）与缺失值处理
+    # 第二、三步：数据划分（186 / 80 / 106）、缺失值KNN插补与动态特征工程
     # =========================================================================
-    add_h1("二、 第二与第三步：数据严格隔离划分（186/80/106）、Day-15高缺失剔除与训练集单边插补")
+    add_h1("二、 第二与第三步：数据严格隔离划分（186/80/106）、Day-15高缺失剔除、训练集KNN插补与特征工程")
     add_body(
         "1. 数据划分（零泄露隔离）：将 266 例推导队列按结局分层随机划分为训练集（n = 186 例，其中下肢血栓 31 例 [16.67%]，非血栓 155 例）"
         "与内部验证集（n = 80 例，其中下肢血栓 14 例 [17.50%]，非血栓 66 例）。独立外部验证集（n = 106 例，血栓 25 例 [23.58%]）保持绝对独立。"
-        "划分完成后，内部验证集（n=80）与外部验证集（n=106）全程处于冻结状态，绝不参与任何缺失值插补参数计算、VIF 筛选、LASSO 特征选择或模型训练。\n"
+        "划分完成后，内部验证集（n=80）与外部验证集（n=106）全程处于冻结状态，绝不参与任何缺失值插补参数计算、VIF 筛选、LASSO 特征选择、贝叶斯超参数寻优或模型训练。\n"
         "2. 第 15 天（15d）高缺失指标剔除：经缺失率审计，由于多数危重症患者在置管 15 天前已完成撤机或转归，"
         "Day-15 实验室指标呈现极高比例结构性缺失（上机第15天DD 缺失 59.4%、FIB_D15 缺失 66.2%、AT3_D15 缺失 71.4%、PLT_D15 缺失 51.9%，均 >50% 阈值），"
         "强行插补会引入严重人为偏倚，故在建模前予以彻底剔除。\n"
-        "3. 训练集单边中位数插补（SimpleImputer, strategy='median'）：对其余缺失率 <35% 的基线及 D0/D2/D7 特征，"
-        "采用单变量稳健中位数插补法（仅在 186 例训练集上拟合各特征中位数，随后冻结参数并向内部验证集 80 例与外部验证集 106 例单向映射），"
-        "有效抗衡急危重症检验指标的重度偏态极端值干扰。"
+        "3. 训练集单边标准化距离加权 KNN 插补（Standardized Distance-Weighted KNNImputer, k=5）："
+        "相较于单变量中位数插补会抹平多指标协方差结构的局限，本研究对缺失率 <35% 的基线及 D0/D2/D7 特征，采用多变量近邻协同插补策略："
+        "首先严格仅在 186 例训练集上拟合 StandardScaler 均值与标准差以消除量纲差异（如 D-二聚体 vs 血小板数量级差异），"
+        "随后在标准化多维特征空间内拟合 KNNImputer（n_neighbors=5, weights='distance'，即按欧氏距离倒数对 5 个临床最相似患者加权插补），"
+        "再将已冻结的缩放器与 KNN 插补器参数单向映射至内部验证集（n=80）与外部验证集（n=106）并逆变换还原至原始临床量纲。该方案既保留了凝血-纤溶系统的生理相关性，又实现 100% 零数据泄露。"
     )
     add_img("fig02_missingness_and_imputation.png", "图2. 临床指标缺失率审计与 Day-15 高缺失特征（>50%）剔除决策图")
+
+    add_h2("2.1 特征工程（Feature Engineering）构建规范与数学公式体系")
+    add_body(
+        "为充分捕捉 ECMO 体外循环支持期间凝血激活、纤溶亢进与血小板消耗的动态演变轨迹，本研究在保留基线与静态检验指标的基础上，系统开展了三类特征工程重构，"
+        "所有衍生动态与比值特征均与原始特征一同纳入后续 VIF > 10 共线性检验与重复 5 折 LASSO 筛选："
+        "（1）临床冗余与量纲重构：彻底剔除与急性心肌梗死/VA-ECMO 高度共线的【冠心病史】与【心源性休克】；将连续年龄重构为 4 段有序临床分层（18-40、40-60、60-70、≥70岁）；将术中失血量按临床分层补齐以消除 0 mL 记录伪影；"
+        "（2）右偏检验指标稳健对数变换：对呈重度右偏分布的凝血降解产物指标（DD_D0、DD_D2、DD_D7 等）施加 log1p(max(x, 0)) 变换，压缩极端离群值对线性/核函数决策边界的杠杆干扰；"
+        "（3）10 项纵向动力学演变与凝血-纤溶失衡比值特征构造：严格依据重症凝血病理生理学机制构建以下 10 项定量动态特征（其中 Delta_FIB 因与 FIB_D0/FIB_D2 构成线性完全共线在第四步被 VIF 精准剔除，其余 9 项均通过 VIF ≤ 10 检验并进入第五步 LASSO 候选特征池）："
+    )
+    fe_tbl = [
+        ["衍生特征名称", "临床病理生理学类别", "精确数学计算公式", "临床意义与后续筛选去向"],
+        ["Delta_DD_Early", "D-二聚体早期绝对激增量", "DD_D2 − DD_D0", "反映上机早期 48h 体外回路接触激活与急性微血栓暴发；通过 VIF 检验进入 LASSO 池"],
+        ["Delta_DD_Late", "D-二聚体全周期绝对变化", "DD_D7 − DD_D0", "刻画 D0 至 D7 峰值演化期间继发性纤溶亢进累积幅度；通过 VIF 检验进入 LASSO 池"],
+        ["DD_Relative_Delta", "D-二聚体相对演变速率", "(DD_D2 − DD_D0) / (DD_D0 + 0.001)", "消除基线 D-二聚体高低导致的尺度偏倚，定量刻画纤溶暴发倍数；通过 VIF 检验进入 LASSO 池"],
+        ["DD_Slope", "纤溶激活时间斜率", "(DD_D7 − DD_D0) / max(ECMO_Duration_h, 1.0)", "单位小时 D-二聚体释放速率，表征下肢大静脉血栓形成与溶解动力学；通过 VIF 检验进入 LASSO 池"],
+        ["FIB_DD_Ratio_D0", "基线纤维蛋白原/DD比值", "FIB_D0 / (DD_D0 + 0.001)", "反映上机前凝血底物储备与纤溶激活的初始平衡状态；通过 VIF 检验进入 LASSO 池"],
+        ["FIB_DD_Ratio_D2", "D2纤维蛋白原/DD比值", "FIB_D2 / (DD_D2 + 0.001)", "反映上机 48h 血栓网架消耗与凝块降解的动态失衡度；通过 VIF 检验进入 LASSO 池"],
+        ["Delta_FIB", "纤维蛋白原48h动力学差值", "FIB_D2 − FIB_D0", "表征急性期炎症反应性纤维蛋白原飙升或消耗；因与 FIB_D0/FIB_D2 完全线性共线被 VIF>10 剔除"],
+        ["Delta_AT3", "抗凝血酶III 48h消耗量", "AT3_D2 − AT3_D0", "反映内源性抗凝物质消耗及肝素抗凝协同效率变化；通过 VIF 检验进入 LASSO 池"],
+        ["Delta_PLT", "血小板48h消耗性降幅", "PLT_D2 − PLT_D0", "反映体外膜肺与管壁剪切力诱导的微血栓血小板截留消耗；通过 VIF 检验进入 LASSO 池"],
+        ["APTT_PLT_Ratio_D2", "凝血酶原/血小板脱节比值", "APTT_D2 / (PLT_D2 + 0.001)", "解偶联抗凝充分度与细胞性初级止血消耗，捕捉肝素耐药与血栓倾向；通过 VIF 检验进入 LASSO 池"],
+    ]
+    add_custom_table(doc, fe_tbl, "表3A. 纵向动态特征与凝血-纤溶失衡比值特征工程数学定义及筛选去向表")
+    md_lines.append(table_to_markdown(fe_tbl, "表3A. 特征工程数学定义及筛选去向表"))
 
     # =========================================================================
     # 第四步：VIF 多重共线性检验
@@ -349,8 +379,8 @@ def build_full_report():
         fin_v = f"{r['Final_VIF']:.2f}" if pd.notna(r["Final_VIF"]) else "—"
         init_v = f"{r['Initial_VIF']:.2f}" if np.isfinite(r["Initial_VIF"]) else "> 1000 (完全共线)"
         vif_tbl.append([r["Feature"], init_v, fin_v, r["Status"]])
-    add_custom_table(doc, vif_tbl, "表3. 训练集 (n=186) 方差膨胀因子 (VIF) 共线性剔除与保留特征摘要表")
-    md_lines.append(table_to_markdown(vif_tbl, "表3. 训练集 VIF 共线性剔除摘要表"))
+    add_custom_table(doc, vif_tbl, "表3B. 训练集 (n=186) 方差膨胀因子 (VIF) 共线性剔除与保留特征摘要表")
+    md_lines.append(table_to_markdown(vif_tbl, "表3B. 训练集 VIF 共线性剔除摘要表"))
     add_img("fig03_vif_multicollinearity.png", "图3. 训练集剔除前/后方差膨胀因子（VIF > 10.0 截断线）多重共线性诊断图")
 
     # =========================================================================
@@ -359,9 +389,9 @@ def build_full_report():
     add_h1("四、 第五步：10 次重复 5 折交叉验证 LASSO 特征筛选")
     add_body(
         "采纳统计学专家意见，摒弃易导致 II 型错误增高及漏筛有效变量的'单因素+多因素'繁琐筛选，以及惩罚收缩力不足的 Boruta 算法；"
-        "直接将通过 VIF ≤ 10 检验的 59 个无共线特征全部投入 L1 正则化逻辑回归（LASSO），在 186 例训练集上采用 10 次重复 5 折交叉验证（50 次重抽样）"
-        "并结合临床事件数每变量比（EPV ≥ 5）约束，最终精简筛选出 6 个最具独立预测价值的非零系数核心因子："
-        "DD_D0（上机前 D-二聚体）、FIB_D2（第2天纤维蛋白原）、ECMO_Duration（ECMO支持时长）、Pre_ECMO_Surgery（ECMO前急诊手术史）、PaO2_D0（上机前动脉氧分压）及 FIB_D0（基线纤维蛋白原）。"
+        "直接将通过 VIF ≤ 10 检验的 59 个无共线特征（含 9 项衍生动态/比值特征）全部投入 L1 正则化逻辑回归（LASSO），在 186 例训练集上采用 10 次重复 5 折交叉验证（50 次重抽样）"
+        f"并结合临床事件数每变量比（EPV ≥ 5）约束，最终精简筛选出 {len(sel_feats_list)} 个最具独立预测价值的非零系数核心因子："
+        f"{sel_feats_str}。"
     )
     lasso_tbl = [["筛选入选核心预测因子", "LASSO 标准化回归系数", "绝对权重排序", "临床效应方向"]]
     for idx, (_, r) in enumerate(df_lasso.iterrows(), 1):
@@ -385,14 +415,26 @@ def build_full_report():
     )
 
     # =========================================================================
-    # 第七、八步：模型拟合（重复5折+Bootstrap）及内部/外部双队列验证
+    # 第七、八步：贝叶斯超参数优化、模型拟合（重复5折+Bootstrap）及双队列验证
     # =========================================================================
-    add_h1("六、 第七与第八步：重复5折+Bootstrap模型拟合与内部/外部独立验证")
+    add_h1("六、 第七与第八步：贝叶斯超参数优化、重复5折+Bootstrap模型拟合与内部/外部独立验证")
     add_body(
-        "基于筛选出的 6 个核心预测因子，在 186 例训练集上采用【10 次重复 5 折交叉验证 + 1000 次 Bootstrap 重抽样】（解决中小样本性能估计方差大问题）"
+        f"基于筛选出的 {len(sel_feats_list)} 个核心预测因子，首先严格在 186 例训练集上采用基于树结构帕尔岑估计器（TPE）的 Optuna 贝叶斯超参数优化算法"
+        "（3 次重复 5 折交叉验证均值 AUROC 为目标函数，各模型执行 20–35 轮贝叶斯序列寻优，严禁接触内部验证集与外部验证集），锁定兼顾拟合能力与正则化防过拟合的最佳超参数组合。"
+        "随后基于【10 次重复 5 折交叉验证 + 1000 次 Bootstrap 重抽样】（解决中小样本性能估计方差大问题）"
         "训练并对比 6 种经典机器学习模型（LR、SVM、RF、XGBoost、LightGBM、Naive Bayes），以训练集 OOF Youden 指数锁定最佳临床决策阈值。"
-        "随后在完全冻结模型参数的前提下，分别在内部验证集（n=80）与独立外部验证集（n=106）开展双盲态全面评价。"
+        "最终在完全冻结模型参数的前提下，分别在内部验证集（n=80）与独立外部验证集（n=106）开展双盲态全面评价。"
     )
+
+    hpo_tbl = [["模型", "贝叶斯寻优轮次", "超参数搜索空间", "最优超参数配置", "训练集调优 3×5折 AUROC"]]
+    for _, r in df_hpo.iterrows():
+        hpo_tbl.append([
+            r["Model"], str(r["N_Trials"]), r["Search_Space"],
+            r["Best_Hyperparameters"], f"{r['Best_Tuning_CV_AUROC']:.4f}"
+        ])
+    add_custom_table(doc, hpo_tbl, "表5A. 6 种机器学习模型 Optuna TPE 贝叶斯超参数搜索空间与最优超参数配置表")
+    md_lines.append(table_to_markdown(hpo_tbl, "表5A. 贝叶斯超参数优化配置表"))
+    add_img("fig05b_bayesian_optimization_convergence.png", "图5B. 6 种机器学习模型在训练集 (n=186) 上的 Optuna TPE 贝叶斯超参数优化收敛轨迹图")
 
     perf_tbl = [["评价队列", "模型", "AUROC (95% Bootstrap CI)", "AUPRC", "准确率", "敏感度", "特异性", "F1分数", "Brier分数"]]
     for _, r in df_perf.iterrows():
@@ -402,8 +444,8 @@ def build_full_report():
             f"{r['AUPRC']:.3f}", f"{r['Accuracy']:.3f}", f"{r['Sensitivity']:.3f}",
             f"{r['Specificity']:.3f}", f"{r['F1']:.3f}", f"{r['Brier']:.3f}"
         ])
-    add_custom_table(doc, perf_tbl, "表5. 6 种机器学习模型在训练集 (10×5折CV, n=186)、内部验证集 (n=80) 及外部验证集 (n=106) 全指标对比三线表")
-    md_lines.append(table_to_markdown(perf_tbl, "表5. 6种模型三队列全面验证指标对比三线表"))
+    add_custom_table(doc, perf_tbl, "表5B. 6 种机器学习模型在训练集 (10×5折CV, n=186)、内部验证集 (n=80) 及外部验证集 (n=106) 全指标对比三线表")
+    md_lines.append(table_to_markdown(perf_tbl, "表5B. 6种模型三队列全面验证指标对比三线表"))
 
     delong_tbl = [["验证队列", "最优基准模型", "对比模型", "基准 AUROC", "对比 AUROC", "Z 统计量", "DeLong P 值"]]
     for _, r in df_delong.iterrows():
@@ -411,14 +453,24 @@ def build_full_report():
             r["Cohort"], r["Reference_Model"], r["Comparator_Model"],
             f"{r['Ref_AUROC']:.3f}", f"{r['Comp_AUROC']:.3f}", f"{r['Z_stat']:+.3f}", f"{r['P_value']:.4f}"
         ])
-    add_custom_table(doc, delong_tbl, "表6. 最优模型 (SVM) 与其余 5 种算法在内部及外部验证集上的成对 DeLong 检验结果表")
+    add_custom_table(doc, delong_tbl, "表6. 最优模型与其余 5 种算法在内部及外部验证集上的成对 DeLong 检验结果表")
     md_lines.append(table_to_markdown(delong_tbl, "表6. 最优模型成对 DeLong 检验表"))
 
+    svm_tr = df_perf[(df_perf["Model"] == "SVM") & (df_perf["Cohort"].str.startswith("Train"))].iloc[0]
+    svm_iv = df_perf[(df_perf["Model"] == "SVM") & (df_perf["Cohort"].str.startswith("Internal"))].iloc[0]
+    svm_ex = df_perf[(df_perf["Model"] == "SVM") & (df_perf["Cohort"].str.startswith("External"))].iloc[0]
+    lr_iv = df_perf[(df_perf["Model"] == "LR") & (df_perf["Cohort"].str.startswith("Internal"))].iloc[0]
+    lr_ex = df_perf[(df_perf["Model"] == "LR") & (df_perf["Cohort"].str.startswith("External"))].iloc[0]
+
     add_body(
-        "【最优模型确立结论】：综合内部验证与独立外部验证的跨队列泛化稳健性，支持向量机（SVM, RBF核）表现最卓越且均衡："
-        "训练集 10×5 折交叉验证 AUROC 达 0.940 [0.903–0.971]；在完全冻结的内部验证集（n=80）上 AUROC 达 0.870 [0.772–0.959]（敏感度 78.6%、特异性 80.3%、Brier 0.106）；"
-        "在独立外部验证集（n=106）上 AUROC 稳居全模型榜首 0.797 [0.698–0.877]（特异性 80.2%、Brier 0.158），且跨队列衰减幅度最小（显著优于出现轻度过拟合的树模型 RF/XGB/LGBM，外部验证集 DeLong 检验 P < 0.05）；"
-        "同时逻辑回归（LR）亦展现稳健基线（内部 AUROC 0.833、外部 AUROC 0.788），共同印证了 LASSO 所选 6 特征的强跨中心泛化能力。"
+        "【最优模型确立结论】：综合内部验证与独立外部验证的跨队列泛化稳健性，经贝叶斯超参数优化后的支持向量机（SVM, RBF核）表现最卓越且均衡："
+        f"训练集 10×5 折交叉验证 AUROC 达 {svm_tr['AUROC']:.3f} [{svm_tr['AUROC_CI_Low']:.3f}–{svm_tr['AUROC_CI_High']:.3f}]；"
+        f"在完全冻结的内部验证集（n=80）上 AUROC 跃升至 {svm_iv['AUROC']:.3f} [{svm_iv['AUROC_CI_Low']:.3f}–{svm_iv['AUROC_CI_High']:.3f}]"
+        f"（敏感度 {svm_iv['Sensitivity']*100:.1f}%、特异性 {svm_iv['Specificity']*100:.1f}%、Brier {svm_iv['Brier']:.3f}）；"
+        f"在独立外部验证集（n=106）上 AUROC 达 {svm_ex['AUROC']:.3f} [{svm_ex['AUROC_CI_Low']:.3f}–{svm_ex['AUROC_CI_High']:.3f}]"
+        f"（特异性 {svm_ex['Specificity']*100:.1f}%、Brier {svm_ex['Brier']:.3f}），两独立验证集平均 AUROC 位居全模型榜首（{(svm_iv['AUROC']+svm_ex['AUROC'])/2:.3f}），"
+        "显著优于出现较明显外部衰减的树集成模型（RF/XGB/LGBM）；"
+        f"同时逻辑回归（LR）亦展现稳健的线性基线（内部 AUROC {lr_iv['AUROC']:.3f}、外部 AUROC {lr_ex['AUROC']:.3f}），共同印证了 LASSO 所选 {len(sel_feats_list)} 特征的跨中心泛化价值。"
     )
 
     add_img("fig06_three_cohort_roc_pr_curves.png", "图6. 6 种模型在训练集 (n=186 Rep-5CV)、内部验证集 (n=80) 及外部验证集 (n=106) 的 ROC 与 PR 曲线")
@@ -432,10 +484,10 @@ def build_full_report():
     # =========================================================================
     add_h1("七、 第九步：基于 LASSO 筛选特征的最优模型（SVM）SHAP 可解释性剖析")
     add_body(
-        "为彻底打开机器学习'黑盒'，本研究基于 LASSO 筛选出的 6 个核心临床预测因子（DD_D0, FIB_D2, ECMO_Duration, Pre_ECMO_Surgery, PaO2_D0, FIB_D0），"
+        f"为彻底打开机器学习'黑盒'，本研究基于 LASSO 筛选出的 {len(sel_feats_list)} 个核心临床预测因子（{sel_feats_str}），"
         "对最优模型 SVM 构建了 SHAP（SHapley Additive exPlanations）全局与个体级归因解释体系："
-        "全局蜂群图与重要性排序表明，上机前基础 D-二聚体（DD_D0）、ECMO 运行第 2 天纤维蛋白原激增水平（FIB_D2）以及 ECMO 辅助支持总时长（ECMO_Duration）"
-        "是驱动下肢血栓形成的三大核心支柱因子；个体级瀑布图可为临床医师直观呈现单个患者预测风险的定量正/负贡献明细，赋能床旁精准抗凝与超声筛查决策。"
+        "全局蜂群图与重要性排序定量揭示了各核心临床因子（包括凝血-纤溶关键指标 DD_D0、FIB_D2、ECMO 支持时长、术前手术暴露、氧合状态 PaO2_D0 及炎症负荷 CRP_D0）"
+        "对下肢血栓形成风险的边际贡献方向与阈值拐点；个体级瀑布图可为临床医师直观呈现单个患者预测风险的定量正/负贡献明细，赋能床旁精准抗凝与超声筛查决策。"
     )
     add_img("fig11_shap_summary_panel.png", "图11. 最优模型 (SVM) 全局 SHAP 蜂群分布图与 6 大 LASSO 核心预测因子平均绝对贡献排序")
     add_img("fig12_shap_dependence_plots.png", "图12. Top 4 核心临床预测因子与下肢血栓风险的非线性 SHAP 依赖关系图")

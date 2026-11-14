@@ -3,9 +3,9 @@
     "DD_D0",
     "FIB_D2",
     "ECMO_Duration",
-    "Pre_ECMO_Surgery",
+    "CRP_D0",
     "PaO2_D0",
-    "FIB_D0"
+    "Pre_ECMO_Surgery"
   ],
   "C": 0.08
 }

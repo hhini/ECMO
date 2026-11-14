@@ -40,7 +40,7 @@ from matplotlib.patches import FancyBboxPatch
 import seaborn as sns
 
 from sklearn.model_selection import train_test_split, RepeatedStratifiedKFold
-from sklearn.impute import SimpleImputer
+from sklearn.impute import KNNImputer
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegressionCV, LogisticRegression
 from sklearn.svm import SVC
@@ -283,7 +283,7 @@ def main():
           f"External Val n={len(X_ext)} (LET+={y_ext.sum()})")
 
     # --------------------------------------------------------------------------
-    # STEP 3: Missingness Audit & Train-Only Median Imputation
+    # STEP 3: Missingness Audit & Train-Only Distance-Weighted KNN Imputation (k=5)
     # --------------------------------------------------------------------------
     miss_rows = []
     for k, (cnt, tot, pct) in d15_s1.items():
@@ -293,16 +293,23 @@ def main():
             "Feature": col, "Cohort": "Train (n=186)",
             "Missing_Count": int(X_tr[col].isna().sum()),
             "Missing_Pct": float(X_tr[col].isna().mean() * 100.0),
-            "Action": "Median Imputed (Train-fit)" if X_tr[col].isna().sum() > 0 else "Complete (0% missing)"
+            "Action": "KNN Imputed (k=5, Train-fit)" if X_tr[col].isna().sum() > 0 else "Complete (0% missing)"
         })
     df_miss = pd.DataFrame(miss_rows)
     df_miss.to_csv(OUT_DIR / "01_missingness_audit.csv", index=False, encoding="utf-8-sig")
 
-    imputer = SimpleImputer(strategy="median")
-    X_tr_imp = pd.DataFrame(imputer.fit_transform(X_tr), columns=X_tr.columns, index=X_tr.index)
-    X_iv_imp = pd.DataFrame(imputer.transform(X_iv), columns=X_iv.columns, index=X_iv.index)
-    X_ext_imp = pd.DataFrame(imputer.transform(X_ext), columns=X_ext.columns, index=X_ext.index)
-    print(f"[Step 3] Excluded 4 Day-15 features (>50% missing). Median imputation fit strictly on Train (n=186).")
+    # Standardize before Euclidean distance calculation so high-scale labs don't dominate,
+    # fit strictly on Train (n=186), then inverse-transform back to clinical units
+    knn_scaler = StandardScaler()
+    X_tr_scaled_raw = pd.DataFrame(knn_scaler.fit_transform(X_tr), columns=X_tr.columns, index=X_tr.index)
+    X_iv_scaled_raw = pd.DataFrame(knn_scaler.transform(X_iv), columns=X_iv.columns, index=X_iv.index)
+    X_ext_scaled_raw = pd.DataFrame(knn_scaler.transform(X_ext), columns=X_ext.columns, index=X_ext.index)
+
+    imputer = KNNImputer(n_neighbors=5, weights="distance")
+    X_tr_imp = pd.DataFrame(knn_scaler.inverse_transform(imputer.fit_transform(X_tr_scaled_raw)), columns=X_tr.columns, index=X_tr.index)
+    X_iv_imp = pd.DataFrame(knn_scaler.inverse_transform(imputer.transform(X_iv_scaled_raw)), columns=X_iv.columns, index=X_iv.index)
+    X_ext_imp = pd.DataFrame(knn_scaler.inverse_transform(imputer.transform(X_ext_scaled_raw)), columns=X_ext.columns, index=X_ext.index)
+    print(f"[Step 3] Excluded 4 Day-15 features (>50% missing). Distance-weighted KNN imputation (k=5) fit strictly on Train (n=186).")
 
     # Plot Fig 02: Missingness & 15d Exclusion
     fig, ax = plt.subplots(figsize=(10, 5.5))
@@ -458,21 +465,188 @@ def main():
     save_fig(fig, "fig05_selected_features_violin_heatmap.png")
 
     # --------------------------------------------------------------------------
-    # STEP 6 & 7: Cost-Sensitive Model Training (Repeated 5-Fold CV + Bootstrap)
+    # STEP 6 & 7: Cost-Sensitive Model Training + Bayesian HPO (Optuna TPE)
     # --------------------------------------------------------------------------
-    pos_ratio = float((len(y_tr) - y_tr.sum()) / y_tr.sum())
-    model_specs = {
-        "LR": Pipeline([("sc", StandardScaler()), ("clf", LogisticRegression(C=1.0, class_weight="balanced", max_iter=1000, random_state=RANDOM_SEED))]),
-        "SVM": Pipeline([("sc", StandardScaler()), ("clf", SVC(kernel="rbf", C=0.5, probability=True, class_weight="balanced", random_state=RANDOM_SEED))]),
-        "RF": Pipeline([("sc", StandardScaler()), ("clf", RandomForestClassifier(n_estimators=200, max_depth=4, min_samples_leaf=5, class_weight="balanced", random_state=RANDOM_SEED))]),
-        "XGB": Pipeline([("sc", StandardScaler()), ("clf", xgb.XGBClassifier(n_estimators=100, max_depth=3, learning_rate=0.05, subsample=0.8, scale_pos_weight=pos_ratio, eval_metric="logloss", random_state=RANDOM_SEED))]),
-        "LGBM": Pipeline([("sc", StandardScaler()), ("clf", lgb.LGBMClassifier(n_estimators=100, max_depth=3, learning_rate=0.05, num_leaves=7, class_weight="balanced", random_state=RANDOM_SEED, verbose=-1))]),
-        "NB": Pipeline([("sc", StandardScaler()), ("clf", GaussianNB())]),
-    }
+    import optuna
+    from sklearn.base import clone
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
 
     X_tr_sel = X_tr_imp[sel_feats]
     X_iv_sel = X_iv_imp[sel_feats]
     X_ext_sel = X_ext_imp[sel_feats]
+
+    pos_ratio = float((len(y_tr) - y_tr.sum()) / y_tr.sum())
+    hpo_cv = RepeatedStratifiedKFold(n_splits=5, n_repeats=3, random_state=RANDOM_SEED)
+
+    def build_model_from_params(m_name: str, params: dict) -> Pipeline:
+        if m_name == "LR":
+            clf = LogisticRegression(
+                C=params["C"],
+                penalty=params["penalty"],
+                solver="liblinear",
+                class_weight="balanced",
+                max_iter=1000,
+                random_state=RANDOM_SEED,
+            )
+        elif m_name == "SVM":
+            clf = SVC(
+                kernel=params["kernel"],
+                C=params["C"],
+                gamma=params.get("gamma", "scale"),
+                probability=True,
+                class_weight="balanced",
+                random_state=RANDOM_SEED,
+            )
+        elif m_name == "RF":
+            clf = RandomForestClassifier(
+                n_estimators=params["n_estimators"],
+                max_depth=params["max_depth"],
+                min_samples_leaf=params["min_samples_leaf"],
+                max_features=params["max_features"],
+                class_weight="balanced",
+                random_state=RANDOM_SEED,
+            )
+        elif m_name == "XGB":
+            clf = xgb.XGBClassifier(
+                n_estimators=params["n_estimators"],
+                max_depth=params["max_depth"],
+                learning_rate=params["learning_rate"],
+                subsample=params["subsample"],
+                colsample_bytree=params["colsample_bytree"],
+                reg_lambda=params["reg_lambda"],
+                scale_pos_weight=pos_ratio,
+                eval_metric="logloss",
+                random_state=RANDOM_SEED,
+            )
+        elif m_name == "LGBM":
+            clf = lgb.LGBMClassifier(
+                n_estimators=params["n_estimators"],
+                max_depth=params["max_depth"],
+                num_leaves=params["num_leaves"],
+                learning_rate=params["learning_rate"],
+                min_child_samples=params["min_child_samples"],
+                subsample=params["subsample"],
+                reg_lambda=params["reg_lambda"],
+                class_weight="balanced",
+                random_state=RANDOM_SEED,
+                verbose=-1,
+            )
+        elif m_name == "NB":
+            clf = GaussianNB(var_smoothing=params["var_smoothing"])
+        else:
+            raise ValueError(f"Unknown model: {m_name}")
+        return Pipeline([("sc", StandardScaler()), ("clf", clf)])
+
+    search_space_desc = {
+        "LR": "C in [0.01, 20.0] (log), penalty in {l1, l2}",
+        "SVM": "kernel in {rbf, linear}, C in [0.05, 20.0] (log), gamma in [1e-3, 0.5] (log)",
+        "RF": "n_estimators in [100, 300], max_depth in [2, 6], min_samples_leaf in [3, 12], max_features in {sqrt, log2, 0.5, 0.8}",
+        "XGB": "n_estimators in [50, 250], max_depth in [2, 5], lr in [0.01, 0.2] (log), subsample/colsample in [0.6, 1.0], reg_lambda in [0.5, 10.0]",
+        "LGBM": "n_estimators in [50, 250], max_depth in [2, 5], num_leaves in [4, 15], lr in [0.01, 0.2] (log), min_child_samples in [5, 20], reg_lambda in [0.5, 10.0]",
+        "NB": "var_smoothing in [1e-11, 1e-3] (log)",
+    }
+
+    model_specs = {}
+    hpo_rows = []
+    hpo_histories = {}
+
+    print("[Step 7A] Running Bayesian Hyperparameter Optimization (Optuna TPE, Train n=186 only)...")
+    for m_name in ["LR", "SVM", "RF", "XGB", "LGBM", "NB"]:
+        n_trials = 20 if m_name == "NB" else 35
+        sampler = optuna.samplers.TPESampler(seed=RANDOM_SEED)
+        study = optuna.create_study(direction="maximize", sampler=sampler)
+
+        def objective(trial, model_name=m_name):
+            if model_name == "LR":
+                params = {
+                    "C": trial.suggest_float("C", 0.01, 20.0, log=True),
+                    "penalty": trial.suggest_categorical("penalty", ["l1", "l2"]),
+                }
+            elif model_name == "SVM":
+                kernel = trial.suggest_categorical("kernel", ["rbf", "linear"])
+                params = {
+                    "kernel": kernel,
+                    "C": trial.suggest_float("C", 0.05, 20.0, log=True),
+                }
+                if kernel == "rbf":
+                    params["gamma"] = trial.suggest_float("gamma", 1e-3, 0.5, log=True)
+            elif model_name == "RF":
+                params = {
+                    "n_estimators": trial.suggest_int("n_estimators", 100, 300, step=50),
+                    "max_depth": trial.suggest_int("max_depth", 2, 6),
+                    "min_samples_leaf": trial.suggest_int("min_samples_leaf", 3, 12),
+                    "max_features": trial.suggest_categorical("max_features", ["sqrt", "log2", 0.5, 0.8]),
+                }
+            elif model_name == "XGB":
+                params = {
+                    "n_estimators": trial.suggest_int("n_estimators", 50, 250, step=25),
+                    "max_depth": trial.suggest_int("max_depth", 2, 5),
+                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
+                    "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                    "colsample_bytree": trial.suggest_float("colsample_bytree", 0.6, 1.0),
+                    "reg_lambda": trial.suggest_float("reg_lambda", 0.5, 10.0, log=True),
+                }
+            elif model_name == "LGBM":
+                params = {
+                    "n_estimators": trial.suggest_int("n_estimators", 50, 250, step=25),
+                    "max_depth": trial.suggest_int("max_depth", 2, 5),
+                    "num_leaves": trial.suggest_int("num_leaves", 4, 15),
+                    "learning_rate": trial.suggest_float("learning_rate", 0.01, 0.2, log=True),
+                    "min_child_samples": trial.suggest_int("min_child_samples", 5, 20),
+                    "subsample": trial.suggest_float("subsample", 0.6, 1.0),
+                    "reg_lambda": trial.suggest_float("reg_lambda", 0.5, 10.0, log=True),
+                }
+            elif model_name == "NB":
+                params = {
+                    "var_smoothing": trial.suggest_float("var_smoothing", 1e-11, 1e-3, log=True),
+                }
+
+            pipe = build_model_from_params(model_name, params)
+            fold_aucs = []
+            for tr_i, va_i in hpo_cv.split(X_tr_sel, y_tr):
+                p_clone = clone(pipe)
+                p_clone.fit(X_tr_sel.iloc[tr_i], y_tr.iloc[tr_i])
+                probs = p_clone.predict_proba(X_tr_sel.iloc[va_i])[:, 1]
+                fold_aucs.append(roc_auc_score(y_tr.iloc[va_i], probs))
+            return float(np.mean(fold_aucs))
+
+        study.optimize(objective, n_trials=n_trials, show_progress_bar=False)
+        best_params = study.best_params
+        best_val = float(study.best_value)
+        model_specs[m_name] = build_model_from_params(m_name, best_params)
+
+        # Record cumulative best AUROC per trial for convergence plot
+        vals = [t.value for t in study.trials if t.value is not None]
+        hpo_histories[m_name] = np.maximum.accumulate(vals)
+
+        fmt_params = ", ".join(
+            f"{k}={v:.4g}" if isinstance(v, float) else f"{k}={v}"
+            for k, v in best_params.items()
+        )
+        hpo_rows.append({
+            "Model": m_name,
+            "N_Trials": n_trials,
+            "Search_Space": search_space_desc[m_name],
+            "Best_Hyperparameters": fmt_params,
+            "Best_Tuning_CV_AUROC": round(best_val, 4),
+        })
+        print(f"  {m_name:4s} | Best 3x5-CV AUROC = {best_val:.4f} | {fmt_params}")
+
+    hpo_df = pd.DataFrame(hpo_rows)
+    hpo_df.to_csv(OUT_DIR / "06_bayesian_hyperparams.csv", index=False, encoding="utf-8-sig")
+
+    # Fig 05b: Bayesian Hyperparameter Optimization Convergence
+    fig, ax = plt.subplots(figsize=(9.5, 5.2))
+    pal_hpo = {"LR": "#2563EB", "SVM": "#DC2626", "RF": "#16A34A", "XGB": "#D97706", "LGBM": "#7C3AED", "NB": "#64748B"}
+    for m_name, hist in hpo_histories.items():
+        ax.plot(np.arange(1, len(hist) + 1), hist, marker="o", markersize=3.5, lw=2.0, color=pal_hpo[m_name], label=f"{m_name} (best={hist[-1]:.3f})")
+    ax.set_xlabel("Bayesian Optimization Trial (Optuna TPE Sampler)", fontweight="bold")
+    ax.set_ylabel("Best-So-Far 3x5-Fold CV AUROC (Train n=186)", fontweight="bold")
+    ax.set_title("Bayesian Hyperparameter Optimization Convergence Across Six ML Models", fontweight="bold")
+    ax.legend(loc="lower right", frameon=True, ncol=2)
+    ax.grid(alpha=0.25, linestyle="--")
+    ax.spines[["top", "right"]].set_visible(False)
+    save_fig(fig, "fig05b_bayesian_optimization_convergence.png")
 
     oof_probs = {m: np.zeros(len(y_tr)) for m in model_specs}
     oof_counts = np.zeros(len(y_tr))
@@ -480,7 +654,7 @@ def main():
     for tr_idx, va_idx in rskf.split(X_tr_sel, y_tr):
         oof_counts[va_idx] += 1
         for m_name, pipe in model_specs.items():
-            p_clone = Pipeline(pipe.steps)
+            p_clone = clone(pipe)
             p_clone.fit(X_tr_sel.iloc[tr_idx], y_tr.iloc[tr_idx])
             oof_probs[m_name][va_idx] += p_clone.predict_proba(X_tr_sel.iloc[va_idx])[:, 1]
 
@@ -780,8 +954,8 @@ def main():
         (0.4, 8.2, 9.2, 1.3, "#1F4E79", "Step 1: Baseline Comparison & Balance Diagnosis\nDerivation Cohort (n=266: 45 LET+, 221 Non-LET) vs External Test Cohort (n=106: 25 LET+, 81 Non-LET)"),
         (0.4, 6.4, 4.3, 1.2, "#0F766E", "Step 2A: Stratified Split -> Training Set\nn = 186 (31 LET+, 155 Non-LET)\nAll preprocessing fit strictly here"),
         (5.3, 6.4, 4.3, 1.2, "#64748B", "Step 2B: Frozen Validation Cohorts\nInternal Val: n = 80 (14 LET+)\nExternal Val: n = 106 (25 LET+)"),
-        (0.4, 4.5, 4.3, 1.3, "#1E40AF", "Step 3-5: Train-Only Feature Pipeline\n1) Purge Day-15 (>50% missing) + Median Impute\n2) VIF Pruning (remove VIF > 10)\n3) Repeated 5-Fold LASSO -> 6 Predictors"),
-        (5.3, 4.5, 4.3, 1.3, "#7C3AED", "Step 6-7: Cost-Sensitive Model Fitting\nclass_weight='balanced' (No synthetic SMOTE)\n6 Models fit with 10x5-Fold CV + 1000 Bootstrap"),
+        (0.4, 4.5, 4.3, 1.3, "#1E40AF", "Step 3-5: Train-Only Feature Pipeline\n1) Purge Day-15 (>50% missing) + KNN Impute (k=5)\n2) VIF Pruning (remove VIF > 10)\n3) Repeated 5-Fold LASSO Feature Selection"),
+        (5.3, 4.5, 4.3, 1.3, "#7C3AED", "Step 6-7: Cost-Sensitive + Bayesian HPO\nclass_weight='balanced' + Optuna TPE Tuning\n6 Models fit with 10x5-Fold CV + 1000 Bootstrap"),
         (0.4, 2.5, 9.2, 1.3, "#B45309", f"Step 8: Dual Validation & Optimal Model ({best_model_name})\nInternal Val (n=80) AUROC={val_summary[best_model_name]:.3f} avg | Evaluated via ROC, PR, Calibration, DCA & DeLong"),
         (0.4, 0.6, 9.2, 1.2, "#DC2626", "Step 9: SHAP Clinical Interpretability\nGlobal Beeswarm, Dependence Interactions & Individual Patient Waterfall Explanations"),
     ]
