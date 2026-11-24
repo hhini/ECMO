@@ -1,6 +1,0 @@
-Feature,Raw_Feature,Mean_Abs_SHAP
-Baseline D-Dimer ln(mg/L),DD_D0,0.17677589581061745
-48h Fibrinogen Delta ΔFIB (g/L),Delta_FIB,0.11207991303627102
-Day 2 Fibrinogen (g/L),FIB_D2,0.08219523932689846
-Longitudinal Delta D-Dimer ΔDD (mg/L),Delta_DD_Late,0.0782258922987626
-Day 2 Antithrombin III (%),AT3_D2,0.021315190341640963

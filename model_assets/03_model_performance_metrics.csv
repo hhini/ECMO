@@ -1,8 +1,0 @@
-Model,Algorithm,Accuracy,Recall,Sensitivity,Specificity,Precision,F1,AUROC,External_AUC,Brier_Score
-LGBM,LightGBM (推荐金标准),0.792,0.8,0.8,0.79,0.543,0.645,0.8814,0.8292,0.129
-RF,Random Forest,0.928,0.825,0.825,0.943,0.723,0.744,0.9815,0.8126,0.162
-XGB,XGBoost,0.921,0.792,0.792,0.939,0.702,0.728,0.9475,0.799,0.166
-LR,Logistic Regression,0.819,0.783,0.783,0.822,0.449,0.556,0.8822,0.8257,0.158
-SVM,Support Vector Machine,0.943,0.7,0.7,0.978,0.822,0.748,0.9482,0.7069,0.174
-DT,Decision Tree,0.94,0.908,0.908,0.943,0.755,0.808,0.9281,0.6111,0.198
-NB,Gaussian Naive Bayes,0.876,0.233,0.233,0.974,0.45,0.284,0.8692,0.5793,0.181
